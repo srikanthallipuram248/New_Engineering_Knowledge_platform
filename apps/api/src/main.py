@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.database import Base, engine
 from src.modules.users.models.user import User  # IMPORTANT
@@ -13,6 +14,10 @@ from src.modules.chat.api.chat_router import (
     router as chat_router
 )
 
+from src.modules.analyzer.api.analyzer_router import (
+    router as analyzer_router
+)
+
 
 #CREATE TABLES
 Base.metadata.create_all(
@@ -20,6 +25,14 @@ Base.metadata.create_all(
 )
 
 app = FastAPI(title="Engineering Knowledge platform")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(
     auth_router,
@@ -41,6 +54,13 @@ app.include_router(
 #chat router
 app.include_router(
     chat_router,
+    prefix="/api/v1"
+)
+
+
+#Analyzer router (Agent 1 — GitHub repo analyzer)
+app.include_router(
+    analyzer_router,
     prefix="/api/v1"
 )
 
