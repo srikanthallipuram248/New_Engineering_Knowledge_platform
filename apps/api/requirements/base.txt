@@ -44,6 +44,19 @@ openpyxl==3.1.5
 python-pptx==1.0.2
 
 sentence-transformers==5.1.0
+textract
+
+
+# Excel
+openpyxl==3.1.5
+pandas==2.3.2
+
+
+
+
+
+
+
 
 #qdrant-client==1.14.3
 qdrant-client==1.9.0
@@ -57,3 +70,6 @@ langchain-core==0.3.18
 
 #BM25
 rank-bm25==0.2.2
+
+#Langsmith
+langsmith
