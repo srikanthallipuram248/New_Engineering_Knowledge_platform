@@ -61,9 +61,27 @@ class ChatService:
         #return result["answer"]
 
         #New
+        # return {
+        #     "answer": result["answer"],
+        #     "sources": result.get("sources", [])
+        # }
+
+        sources = []
+        for s in result.get("sources", []):
+            sources.append(
+                {
+                    "document_id": s["document_id"],
+                    "filename": s["filename"],
+                    "rerank_score": s.get(
+                        "rerank_score",
+                        0
+                    )
+                }
+            )
+
         return {
             "answer": result["answer"],
-            "sources": result.get("sources", [])
+            "sources": sources
         }
     
     

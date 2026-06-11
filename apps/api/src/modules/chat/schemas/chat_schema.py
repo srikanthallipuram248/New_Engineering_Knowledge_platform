@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 
 
@@ -17,7 +17,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: List[Dict[str, Any]] = []
+    sources: List[Dict[str, Any]] = Field(decimal_places=list)
 
 
 
