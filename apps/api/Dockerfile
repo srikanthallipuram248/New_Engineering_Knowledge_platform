@@ -9,7 +9,7 @@
 
 # COPY . .
 
-# CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
 FROM python:3.12-slim
@@ -22,6 +22,9 @@ ENV PYTHONUNBUFFERED=1
 
 # Upgrade pip first (important for stability)
 RUN pip install --upgrade pip
+
+# Install git (required by gitpython for repo analysis)
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first (better Docker cache)
 COPY requirements/base.txt ./requirements/base.txt
@@ -36,4 +39,4 @@ RUN pip install --no-cache-dir \
 COPY . .
 
 # Run app
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     
     #Groq API key
     GROQ_API_KEY: str
+    GROQ_ANALYSIS_MODEL: str = "llama-3.3-70b-versatile"
 
     #Authentication
     JWT_SECRET_KEY: str
