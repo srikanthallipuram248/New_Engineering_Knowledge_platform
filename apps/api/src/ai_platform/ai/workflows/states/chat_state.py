@@ -22,9 +22,11 @@ class ChatState(TypedDict):
     rewritten_question: str
     keywords: List[str]
 
-    filters: dict
+    #filters: dict
 
     context: str
+
+    #New
     sources: list
 
     answer: str

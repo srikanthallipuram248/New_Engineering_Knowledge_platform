@@ -10,6 +10,9 @@ from src.ai_platform.ai.rag.reranker_service import (
     RerankerService
 )
 
+from src.ai_platform.ai.rag.query_expansion_service import (
+    QueryExpansionService
+)
 
 
 class HybridSearchService:
@@ -22,11 +25,43 @@ class HybridSearchService:
         filters: dict = None
     ):
         
-        vector_results = SearchService.search(
-            query=query,
-            #limit=limit
-            limit=20,
-            filters=filters
+        # vector_results = SearchService.search(
+        #     query=query,
+        #     #limit=limit
+        #     limit=20,
+        #     filters=filters
+        # )
+
+        #New for QueryExpantationService
+        expanded_queries = QueryExpansionService.expand(
+            query
+        )
+
+        all_results = []
+
+        for q in expanded_queries:
+
+            results = SearchService.search(
+                query=q,
+                limit=10,
+                filters=filters
+            )
+
+            all_results.extend(results)
+        unique_results = {}
+
+        for item in all_results:
+
+            key = (
+                item["document_id"],
+                item["text"]
+            )
+
+            if key not in unique_results:
+                unique_results[key] = item
+
+        vector_results = list(
+            unique_results.values()
         )
 
         bm25_results = BM25Service.search(

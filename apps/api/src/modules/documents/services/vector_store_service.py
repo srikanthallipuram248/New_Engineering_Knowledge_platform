@@ -91,6 +91,7 @@ class VectorStoreService:
 
 
         #New
+        qdrant_filter = None
         if filters and filters.get("filename"):
 
             qdrant_filter = Filter(
@@ -110,3 +111,19 @@ class VectorStoreService:
             limit=limit,
             query_filter=qdrant_filter
         )
+        return [
+            {
+                "score": result.score,
+                "text": result.payload.get(
+                    "text",
+                    ""
+                ),
+                "document_id": result.payload.get(
+                    "document_id"
+                ),
+                "filename": result.payload.get(
+                    "filename"
+                )
+            }
+            for result in results
+        ]
