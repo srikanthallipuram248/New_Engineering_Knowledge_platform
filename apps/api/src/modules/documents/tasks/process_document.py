@@ -7,7 +7,7 @@ def process_document(
 ):
     text = DocumentProcessor.extract_text(file_path)
     
-    chunks = DocumentProcessor.chunck_text(text)
+    chunks = DocumentProcessor.chunk_text(text)
     
     print(f"Text length: {len(text)}")
     print(f"CHunks Created: {len(chunks)}")

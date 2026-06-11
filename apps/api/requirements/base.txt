@@ -62,10 +62,14 @@ pandas==2.3.2
 qdrant-client==1.9.0
 
 #AI
-groq==1.4.0
+groq>=0.4.1,<1.0.0
 
 langgraph==0.2.35
-langchain-core==0.3.18
+langchain-core>=0.3.42,<0.4
+langchain-groq>=0.2.0,<0.3.0
+
+#Agent 1 - Repo Analyzer
+gitpython==3.1.43
 
 
 #BM25
