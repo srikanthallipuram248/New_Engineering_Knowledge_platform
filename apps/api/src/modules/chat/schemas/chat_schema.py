@@ -17,7 +17,11 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: List[Dict[str, Any]] = Field(decimal_places=list)
+    #sources: List[Dict[str, Any]] = Field(decimal_places=list)
 
+    #New
+    sources: List[Dict[str, Any]] = Field(
+        default_factory=list
+    )
 
 
