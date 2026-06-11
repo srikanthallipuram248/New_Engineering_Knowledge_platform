@@ -18,10 +18,30 @@ def analyze_node(state):
         state.get("history")
     )
 
+    # return {
+    #     "rewritten_question": analysis["rewritten_question"],
+    #     "keywords": analysis.get("keywords", []),
+    #     "filters": analysis.get("filters", {})
+    # }
+
+    #Update for Intent router graph
     return {
-        "rewritten_question": analysis["rewritten_question"],
-        "keywords": analysis.get("keywords", []),
-        "filters": analysis.get("filters", {})
+        "intent": analysis.get(
+            "intent",
+            "rag"
+        ),
+        "rewritten_question": analysis.get(
+            "rewritten_question",
+            state["question"]
+        ),
+        "keywords": analysis.get(
+            "keywords",
+            []
+        ),
+        "filters": analysis.get(
+            "filters",
+            {}
+        )
     }
 
 
@@ -80,6 +100,23 @@ def chat_node(state):
     }
 
 
+#------------------
+# Direct chat node
+# -----------------
+
+def direct_chat_node(state):
+
+    answer = ChatAgent.answer(
+        question=state["question"],
+        context="",
+        history=state.get(
+            "history"
+        )
+    )
+
+    return {
+        "answer": answer
+    }
 
 
 

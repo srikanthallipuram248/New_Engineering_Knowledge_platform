@@ -31,6 +31,9 @@ class ChatState(TypedDict):
 
     answer: str
 
+    #New for Intent
+    intent: str
+
 
 
 
