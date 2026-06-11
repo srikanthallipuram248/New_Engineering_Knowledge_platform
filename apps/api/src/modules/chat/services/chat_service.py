@@ -66,16 +66,22 @@ class ChatService:
         #     "sources": result.get("sources", [])
         # }
 
+        seen = set()
         sources = []
+        
         for s in result.get("sources", []):
+            key = s["document_id"]
+            
+            if key in seen:
+                continue
+            
+            seen.add(key)
+            
             sources.append(
                 {
                     "document_id": s["document_id"],
                     "filename": s["filename"],
-                    "rerank_score": s.get(
-                        "rerank_score",
-                        0
-                    )
+                    "rerank_score": s.get("rerank_score", 0)
                 }
             )
 

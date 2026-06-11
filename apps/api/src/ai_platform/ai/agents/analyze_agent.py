@@ -129,6 +129,7 @@ If no filters exist:
         # -----------------------
         # Parse LLM JSON safely
         # -----------------------
+        
         try:
 
             cleaned = content.strip()
@@ -143,11 +144,18 @@ If no filters exist:
                     ""
                 )
                 cleaned = cleaned.strip()
-
+            #Extract JSON from LLM response
+            match = re.search(
+                r'\{.*\}',
+                cleaned,
+                re.DOTALL
+            )
+            
+            if match:
+                cleaned = match.group(0)
+                
             result = json.loads(cleaned)
-
         except Exception as e:
-
             print("JSON ERROR =", e)
             print("RAW CONTENT =", content)
 
@@ -166,7 +174,7 @@ If no filters exist:
         filters = result.get("filters") or {}
 
         filename_match = re.search(
-            r'([\w\-]+\.(pdf|txt|docx|xlsx|pptx))',
+            r'([\w\-]+\.(pdf|txt|doc|docx|csv|xlsx|pptx))',
             question,
             re.IGNORECASE
         )

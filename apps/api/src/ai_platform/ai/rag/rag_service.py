@@ -109,6 +109,18 @@ class RAGService:
             f"[DOC {i+1}]\n{r['text']}"
             for i, r in enumerate(results)
         )
+        
+        print("\n========== QUESTION ==========")
+        print(rewritten_question)
+
+        print("\n========== RESULTS ==========")
+        for r in results:
+            print("FILE:", r.get("filename"))
+            print("TEXT:", r.get("text")[:300])
+            print("----------------")
+
+        print("\n========== CONTEXT ==========")
+        print(context[:2000])
 
         return {
             "rewritten_question": rewritten_question,

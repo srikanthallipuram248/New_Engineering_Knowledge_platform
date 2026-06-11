@@ -31,6 +31,11 @@ class Document(Base):
         String(50)
     )
     
+    file_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False
+    )
+    
     #forrign key with another table
     uploaded_by: Mapped[int] = mapped_column(
         ForeignKey("users.id")

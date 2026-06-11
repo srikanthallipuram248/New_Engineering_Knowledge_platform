@@ -44,6 +44,7 @@ class VectorStoreService:
         chunk_id,
         document_id,
         filename,
+        uploaded_by,
         text,
         embedding
     ):
@@ -56,6 +57,7 @@ class VectorStoreService:
                     payload={
                         "document_id": document_id,
                         "filename": filename,
+                        "uploaded_by": uploaded_by,
                         "text": text
                     }
                 )

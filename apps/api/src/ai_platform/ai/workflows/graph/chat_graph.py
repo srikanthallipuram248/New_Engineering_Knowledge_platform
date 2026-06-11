@@ -37,7 +37,8 @@ def build_chat_graph():
         {
             "rag": "rag",
             "chat": "direct_chat",
-            "db": "rag"
+            "db": "rag",
+            "followup": "rag"
         }
     )
 
@@ -66,9 +67,17 @@ def router_intent(state):
         "intent",
         "rag"
     )
-
+    
+    if intent not in [
+        "rag",
+        "chat",
+        "db",
+        "followup"
+    ]:
+        intent = "rag"
+    
     print("INTENT =", intent)
-
+    
     return intent
 
 

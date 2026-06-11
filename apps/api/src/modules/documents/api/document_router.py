@@ -38,6 +38,10 @@ from src.modules.documents.services.embedding_service import (
 #     VectorStoreService
 # )
 
+from src.modules.documents.utils.file_hash import (
+    calculate_file_hash
+)
+
 
 
 
@@ -64,12 +68,29 @@ def upload_document(
     with open(file_path, "wb") as buffer:
         while chunk := file.file.read(1024 * 1024):
             buffer.write(chunk)
+        
+    file_hash = calculate_file_hash(
+        file_path
+    )
     
+    existing = db.query(
+        Document
+    ).filter(
+        Document.file_hash == file_hash
+    ).first()
+
+    if existing:
+        return {
+            "message": "File already uploaded",
+            "document_id": existing.id
+        }
+
     document = Document(
         title=file.filename,
         file_name=file.filename,
         file_path=file_path,
         file_type=file.filename.split(".")[-1],
+        file_hash=file_hash,
         uploaded_by=user.id
     )
     
@@ -85,12 +106,40 @@ def upload_document(
         chunks = chunks
     )
     
+    #Adding automatice indexing
+    vector_service = VectorStoreService()
+    
+    saved_chunks = db.query(
+        DocumentChunk
+    ).filter(
+        DocumentChunk.document_id == document.id
+    ).all()
+    
+    indexed_count = 0
+
+    for chunk in saved_chunks:
+
+        embedding = EmbeddingsService.generate(
+            chunk.chunk_text
+        )
+
+        vector_service.insert_chunk(
+            chunk_id=chunk.id,
+            document_id=document.id,
+            filename=document.file_name,
+            uploaded_by=document.uploaded_by,
+            text=chunk.chunk_text,
+            embedding=embedding
+        )
+
+        indexed_count += 1
+    
     
     return {
-        "message": "Uploaded successfully",
+        "message": "Uploaded and indexed successfully",
         "document_id": document.id,
-        #"chunks_created": len(chunks),
-        "chunks_saved": save_chunk
+        "chunks_saved": save_chunk,
+        "chunks_indexed": indexed_count
     }
 
 #New Index API
@@ -136,6 +185,7 @@ def index_document(
             chunk_id=chunk.id,
             document_id=document_id,
             filename=document.file_name,
+            uploaded_by=document.uploaded_by,
             text=chunk.chunk_text,
             embedding=embedding
         )

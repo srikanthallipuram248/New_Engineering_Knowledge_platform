@@ -83,6 +83,17 @@ class HybridSearchService:
             results=bm25_results,
             top_k=5
         )
+        
+        print("\n===== RERANKED RESULTS =====")
+
+        for r in reranked:
+            print(
+                r["filename"],
+                r["document_id"],
+                r.get("rerank_score")
+            )
+            print(r["text"][:200])
+            print("------------------")
 
 
 
