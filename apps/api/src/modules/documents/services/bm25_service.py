@@ -30,6 +30,17 @@ class BM25Service:
             reverse=True
         )
 
+        print("\n===== BM25 TOP RESULTS =====")
+
+        for doc, score in ranked[:10]:
+            print(
+                f"{doc.get('filename')} | "
+                f"doc={doc.get('document_id')} | "
+                f"score={float(score)}"
+            )
+
+        print("============================\n")
+
         results = []
 
         for doc, score in ranked[:limit]:
@@ -42,5 +53,7 @@ class BM25Service:
                     "filename": doc.get("filename")
                 }
             )
+        
+        
 
         return results

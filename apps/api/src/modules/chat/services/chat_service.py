@@ -31,7 +31,7 @@ class ChatService:
         # )
 
         #New graph code
-        
+        print("USER ID =", user.id)
         result = graph.invoke(
             {
                 "question": question,
@@ -40,6 +40,7 @@ class ChatService:
             }
         )
 
+        print("GRAPH RESULT =", result)
         #return result["answer"]
 
         #New

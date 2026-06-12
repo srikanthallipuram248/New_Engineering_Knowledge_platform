@@ -85,9 +85,29 @@ class HybridSearchService:
             top_k=10
         )
 
+        print("\n===== HYBRID SEARCH =====")
+        print("QUERY =", query)
         print("VECTOR RESULTS =", len(vector_results))
         print("BM25 RESULTS =", len(bm25_results))
         print("RERANK RESULTS =", len(reranked))
+
+        for r in reranked[:5]:
+            print(
+                r["filename"],
+                r["document_id"]
+            )
+
+        print("\n===== QUERY EXPANSION =====")
+
+        for q in expanded_queries:
+            print(q)
+
+        print("===========================\n")
+
+        if not reranked:
+            return bm25_results[:5]
+
+
 
         return reranked[:5]
         

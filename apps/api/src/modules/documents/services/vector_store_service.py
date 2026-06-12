@@ -131,6 +131,9 @@ class VectorStoreService:
             limit=limit,
             query_filter=qdrant_filter
         )
+
+        print("QDRANT FILTER =", qdrant_filter)
+        print("UPLOADED BY =", uploaded_by)
         return [
             {
                 "score": result.score,
@@ -148,6 +151,8 @@ class VectorStoreService:
             for result in results
         ]
     
+        print("QDRANT RESULTS =", len(results))
+
     #Delete method
     def delete_document_vectors(
         self,

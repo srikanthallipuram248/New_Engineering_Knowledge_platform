@@ -1,35 +1,17 @@
-from src.modules.documents.services.search_service import (
-    SearchService
-)
-
-from src.ai_platform.ai.llms.llm_service import(
-    LLMService
-)
-from src.ai_platform.ai.prompts.rag_prompt import (
-    RAG_PROMPT
- )
- 
 from src.ai_platform.ai.llms.groq_service import (
     GroqService
 )
 
-#new update code for analyze service agent
 from src.ai_platform.ai.agents.analyze_agent import (
     AnalyzeAgent
 )
 
-#Hybrid search
 from src.ai_platform.ai.rag.hybrid_search_service import (
     HybridSearchService
 )
 
- 
-
 
 class RAGService:
-
-    #Now:
-    #question → analyze → rewrite → better search → better answer
 
     @staticmethod
     def ask(
@@ -37,36 +19,38 @@ class RAGService:
         history: list = None,
         uploaded_by: int = None
     ):
-        # 1. ANALYZE STEP (NEW)
         analysis = AnalyzeAgent.analyze(
             question,
             history
         )
 
-        rewritten_question = analysis["rewritten_question"]
+        rewritten_question = analysis[
+            "rewritten_question"
+        ]
 
-
-        # 2 Hybrid search using improved query
-        # results = SearchService.search(
-        #     query=rewritten_question,
-        #     limit=5
-        # )
-
-        #New
         results = HybridSearchService.search(
             query=rewritten_question,
-            filters=analysis.get("filters", {}),
+            filters=analysis.get(
+                "filters",
+                {}
+            ),
             limit=5,
             uploaded_by=uploaded_by
         )
 
-        # 3 Build context
-        context = "\n\n".join(
-            f"[DOC {i+1}]\n{r['text']}"
-            for i, r in enumerate(results)
-        )
+        top_results = results[:3]
 
-        # 4 Final LLM call
+        context = "\n\n".join(
+            f"""
+FILENAME: {r['filename']}
+DOCUMENT_ID: {r['document_id']}
+RELEVANCE_SCORE: {r.get('rerank_score', r.get('score', 0))}
+
+CONTENT:
+{r['text']}
+"""
+            for r in top_results
+        )
 
         answer = GroqService.generate(
             question=rewritten_question,
@@ -75,98 +59,66 @@ class RAGService:
         )
 
         return answer
-    
 
-
-    # ---------------
-    # Retrieve
-    # ---------------
     @staticmethod
     def retrieve(
         question: str,
         history: list = None,
         uploaded_by: int = None
     ):
-        
+
         analysis = AnalyzeAgent.analyze(
             question,
             history
         )
 
-        rewritten_question = analysis["rewritten_question"]
+        rewritten_question = analysis[
+            "rewritten_question"
+        ]
 
-        # results = SearchService.search(
-        #     query=rewritten_question,
-        #     limit=5
-        # )
-
-        #New
         results = HybridSearchService.search(
             query=rewritten_question,
-            filters=analysis.get("filters", {}),
+            filters=analysis.get(
+                "filters",
+                {}
+            ),
             limit=5,
             uploaded_by=uploaded_by
         )
 
+        print("\n===== FINAL RANKING =====")
+
+        for r in results:
+            print(
+                f"{r['filename']} | "
+                f"Score={r.get('rerank_score', r.get('score', 0))}"
+            )
+
+        print("=========================\n")
+
+        top_results = results[:3]
+
         context = "\n\n".join(
-            f"[DOC {i+1}]\n{r['text']}"
-            for i, r in enumerate(results)
+            f"""
+FILENAME: {r['filename']}
+DOCUMENT_ID: {r['document_id']}
+RELEVANCE_SCORE: {r.get('rerank_score', r.get('score', 0))}
+
+CONTENT:
+{r['text']}
+"""
+            for r in top_results
         )
+
+        print("\n===== RETRIEVE =====")
+        print("QUESTION =", rewritten_question)
+        print("RESULTS =", len(results))
+        print("CONTEXT LENGTH =", len(context))
+        print(context[:1000])
+        print("====================\n")
 
         return {
             "rewritten_question": rewritten_question,
             "context": context,
             "results": results
         }
-
-
-
-
-    
-    #
-    # Before:
-    # direct question → search → answer
-    # @staticmethod
-    # def ask(
-    #     question: str,
-    #     history: list = None
-    # ):
-        
-    #     results = SearchService.search(
-    #         query = question,
-    #         limit = 5
-    #     )
-        
-    #     # context = "\n\n".join(
-    #     #     [r["text"] for r in results]
-    #     # )
-        
-    #     context = "\n\n".join(
-    #         f"[DOC {i+1}]\n{r['text']}"
-    #         for i, r in enumerate(results)
-    #     )
-
-    #     # prompt = RAG_PROMPT.format(
-    #     #     context = context,
-    #     #     question = question
-    #     # )
-        
-    #     answer = GroqService.generate(
-    #         question=question,
-    #         context=context,
-    #         history = history
-    #     )
-        
-    #     return answer
-
-
-
-
-
-
-
-
-
-
-
-

@@ -65,15 +65,14 @@ def rag_node(state):
         uploaded_by=state.get("uploaded_by")
     )
 
-    # return {
-    #     "context": data["context"]
-    # }
-    print("RESULT COUNT =", len(data["results"]))
+    print("RAG NODE RESULTS =", len(data["results"]))
+    print("RAG NODE CONTEXT =", len(data["context"]))
     #New
     return {
         "context": data["context"],
         "sources": data["results"]
     }
+
 
 
 #----------------

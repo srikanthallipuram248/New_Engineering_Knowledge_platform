@@ -21,6 +21,18 @@ class GroqService:
         history=None
     ):
 
+        print("\n===== GROQ =====")
+        print("QUESTION =", question)
+        print("CONTEXT LENGTH =", len(context))
+
+        if context:
+            print("CONTEXT PREVIEW:")
+            print(context[:1000])
+        else:
+            print("CONTEXT IS EMPTY")
+
+        print("================\n")
+
         messages = [
             {
                 "role": "system",
@@ -28,7 +40,7 @@ class GroqService:
             }
         ]
 
-        # Optional chat history
+        # History
         if history:
             for msg in history[-10:]:
                 messages.append(
@@ -37,29 +49,28 @@ class GroqService:
                         "content": msg.content
                     }
                 )
+        # Single user message containing both context and question
 
-        # Document context
-        messages.append(
-            {
-                "role": "system",
-                "content": f"""
-CONTEXT:
-
-{context}
-
-Answer ONLY from this context.
-If the answer is not present, say:
-
-I don't know based on the uploaded documents.
-"""
-            }
-        )
-
-        # User question
         messages.append(
             {
                 "role": "user",
-                "content": question
+                "content": f"""
+        CONTEXT:
+
+        {context}
+
+        QUESTION:
+
+        {question}
+
+        Instructions:
+        - Answer ONLY using the context.
+        - Give a concise answer first.
+        - If available, include relevant supporting details.
+        - If the answer is not present in the context, reply exactly:
+
+        I don't know based on the uploaded documents.
+        """
             }
         )
 
@@ -68,6 +79,7 @@ I don't know based on the uploaded documents.
             messages=messages,
             temperature=0.1
         )
+
 
         return response.choices[0].message.content
     

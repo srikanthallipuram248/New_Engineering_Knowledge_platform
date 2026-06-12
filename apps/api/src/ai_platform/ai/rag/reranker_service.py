@@ -23,41 +23,36 @@ class RerankerService:
         results,
         top_k=5
     ):
-        
+
         if not results:
             return []
-        
 
         pairs = [
             (query, r["text"])
             for r in results
         ]
 
-        scores = cls.model.predict(
-            pairs
-        )
+        scores = cls.model.predict(pairs)
 
-        for result, score in zip(
-            results,
-            scores
-        ):
+        for result, score in zip(results, scores):
             result["rerank_score"] = float(score)
 
         ranked = sorted(
             results,
-            key=lambda x: x["rerank_score"],
+            key=lambda x: x["rerank_score"] > -9,
             reverse=True
         )
 
-        #return ranked[:top_k]
+        print("\n===== RERANK SCORES =====")
 
-        #for better accuracy
-        filtered = [
-            r for r in ranked
-            if r["rerank_score"] > -8
-        ]
+        for r in ranked:
+            print(
+                r["filename"],
+                r["rerank_score"]
+            )
 
-        return filtered[:top_k]
+        print("=========================\n")
+        return ranked[:top_k]
 
 
 

@@ -5,11 +5,13 @@ Rules:
 
 - Use ONLY the provided document context.
 - Do not use external knowledge.
-- Do not invent facts.
-- Keep answers concise and factual.
-- If the answer exists, summarize it naturally.
-- Do not dump entire document chunks.
-- If the answer is not found, respond exactly:
+- Do not invent information.
+- Prefer information from the highest relevance documents.
+- Answer concisely and naturally.
+- Summarize instead of copying chunks.
+- Mention the source filename when relevant.
+
+If the answer cannot be found in the provided context, respond exactly:
 
 I don't know based on the uploaded documents.
 """
