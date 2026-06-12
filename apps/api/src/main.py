@@ -18,6 +18,9 @@ from src.modules.analyzer.api.analyzer_router import (
     router as analyzer_router
 )
 
+from src.modules.documents.services.vector_store_service import (
+    VectorStoreService
+)
 
 #CREATE TABLES
 Base.metadata.create_all(
@@ -33,6 +36,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# @app.on_event("startup")
+# def startup():
+#     VectorStoreService().create_collection()
+
 
 app.include_router(
     auth_router,

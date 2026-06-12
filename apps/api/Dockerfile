@@ -5,7 +5,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Required for legacy .doc files
+# Required packages
 RUN apt-get update && \
     apt-get install -y \
         git \
@@ -17,8 +17,8 @@ RUN pip install --upgrade pip
 COPY requirements/base.txt ./requirements/base.txt
 
 RUN pip install --no-cache-dir \
-    --timeout 200 \
-    --retries 10 \
+    --timeout 1000 \
+    --retries 20 \
     -r requirements/base.txt
 
 COPY . .

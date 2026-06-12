@@ -49,7 +49,15 @@ class RerankerService:
             reverse=True
         )
 
-        return ranked[:top_k]
+        #return ranked[:top_k]
+
+        #for better accuracy
+        filtered = [
+            r for r in ranked
+            if r["rerank_score"] > -8
+        ]
+
+        return filtered[:top_k]
 
 
 

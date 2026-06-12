@@ -76,14 +76,27 @@ def upload_document(
     existing = db.query(
         Document
     ).filter(
-        Document.file_hash == file_hash
+        Document.file_hash == file_hash,
+        Document.uploaded_by == user.id
     ).first()
 
+    # if existing:
+    #     return {
+    #         "message": "File already uploaded",
+    #         "document_id": existing.id
+    #     }
+    
+    #for Better response
     if existing:
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
         return {
             "message": "File already uploaded",
             "document_id": existing.id
         }
+
 
     document = Document(
         title=file.filename,
@@ -108,6 +121,7 @@ def upload_document(
     
     #Adding automatice indexing
     vector_service = VectorStoreService()
+    #vector_service.create_collection()
     
     saved_chunks = db.query(
         DocumentChunk
@@ -202,22 +216,25 @@ def index_document(
 
 
 #vector store
-@router.post("/create-vector-db")
-def create_vector_db():
 
-    service = VectorStoreService()
+# Keep endpoint for admin/debugging (whenever you want use it)
+# @router.post("/create-vector-db")
+# def create_vector_db():
 
-    service.create_collection()
+#     service = VectorStoreService()
 
-    return {
-        "message": "Qdrant collection created"
-    }
+#     service.create_collection()
+
+#     return {
+#         "message": "Qdrant collection created"
+#     }
 
 
 #for search
 @router.post("/search")
 def search_documents(
     query: str = Body(...),
+    user=Depends(get_current_user)
 ):
 
     embedding = EmbeddingsService.generate(
@@ -227,7 +244,8 @@ def search_documents(
     vector_service = VectorStoreService()
 
     results = vector_service.search(
-        embedding
+        embedding,
+        uploaded_by=user.id
     )
 
     return {
@@ -243,11 +261,14 @@ def search_documents(
 
 @router.get("")
 def list_documents(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
-    
+
     documents = db.query(
         Document
+    ).filter(
+        Document.uploaded_by == user.id
     ).all()
 
     return [
@@ -266,13 +287,15 @@ def list_documents(
 @router.get("/{document_id}")
 def get_document(
     document_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
-    
+
     document = db.query(
         Document
     ).filter(
-        Document.id == document_id
+        Document.id == document_id,
+        Document.uploaded_by == user.id
     ).first()
 
     if not document:
@@ -296,9 +319,23 @@ def get_document(
 @router.get("/{document_id}/chunks")
 def get_document_chunks(
     document_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
-    
+    #better accuracy
+    document = db.query(
+        Document
+    ).filter(
+        Document.id == document_id,
+        Document.uploaded_by == user.id
+    ).first()
+
+    if not document:
+        return {
+            "message": "Document not found"
+        }
+
+
     chunks = db.query(
         DocumentChunk
     ).filter(
@@ -318,13 +355,15 @@ def get_document_chunks(
 @router.delete("/{document_id}")
 def delete_document(
     document_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
     
     document = db.query(
         Document
     ).filter(
-        Document.id == document_id
+        Document.id == document_id,
+        Document.uploaded_by == user.id
     ).first()
 
     if not document:
@@ -332,6 +371,21 @@ def delete_document(
             "message": "Document not found"
         }
     
+    # Delete vectors from Qdrant
+    vector_service = VectorStoreService()
+
+    vector_service.delete_document_vectors(
+        document.id
+    )
+
+    # Delete physical file
+    if (
+        document.file_path and
+        os.path.exists(document.file_path)
+    ):
+        os.remove(document.file_path)
+
+    # Delete database record
     db.delete(document)
     db.commit()
 

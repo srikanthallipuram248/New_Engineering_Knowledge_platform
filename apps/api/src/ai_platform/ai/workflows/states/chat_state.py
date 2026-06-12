@@ -22,7 +22,7 @@ class ChatState(TypedDict):
     rewritten_question: str
     keywords: List[str]
 
-    #filters: dict
+    filters: dict
 
     context: str
 
@@ -33,6 +33,8 @@ class ChatState(TypedDict):
 
     #New for Intent
     intent: str
+
+    uploaded_by: int
 
 
 

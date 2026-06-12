@@ -1,10 +1,13 @@
 from pathlib import Path
-
 from pypdf import PdfReader
 from docx import Document
 from pptx import Presentation
 import pandas as pd
-import textract
+import subprocess
+
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter
+)
 
 
 class DocumentProcessor:
@@ -66,12 +69,18 @@ class DocumentProcessor:
 
     @staticmethod
     def _extract_doc(path: Path) -> str:
+
         try:
-            text = textract.process(
-                str(path)
+            result = subprocess.run(
+                ["antiword", str(path)],
+                capture_output=True,
+                text=True
             )
 
-            return text.decode("utf-8")
+            if result.returncode != 0:
+                raise ValueError(result.stderr)
+
+            return result.stdout
 
         except Exception as e:
             raise ValueError(
@@ -137,26 +146,40 @@ class DocumentProcessor:
     @staticmethod
     def chunk_text(
         text: str,
-        chunk_size: int = 500,
-        overlap: int = 50
+        #chunk_size: int = 1000,
+        #overlap: int = 100
     ) -> list[str]:
 
         if not text.strip():
             return []
 
-        chunks = []
-        start = 0
+        # chunks = []
+        # start = 0
 
-        while start < len(text):
+        # while start < len(text):
 
-            end = start + chunk_size
+        #     end = start + chunk_size
 
-            chunks.append(
-                text[start:end]
-            )
+        #     chunks.append(
+        #         text[start:end]
+        #     )
 
-            start += (
-                chunk_size - overlap
-            )
+        #     start += (
+        #         chunk_size - overlap
+        #     )
 
-        return chunks
+        # return chunks
+
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=50,
+            separators=[
+                "\n\n",
+                "\n",
+                ". ",
+                " ",
+                ""
+            ]
+        )
+
+        return splitter.split_text(text)

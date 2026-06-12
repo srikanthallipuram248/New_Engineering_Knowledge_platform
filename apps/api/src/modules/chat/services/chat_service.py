@@ -54,7 +54,8 @@ class ChatService:
         result = graph.invoke(
             {
                 "question": question,
-                "history": history
+                "history": history,
+                "uploaded_by": user.id
             }
         )
 

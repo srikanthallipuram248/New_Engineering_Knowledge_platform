@@ -76,7 +76,7 @@ def router_intent(state):
     ]:
         intent = "rag"
     
-    print("INTENT =", intent)
+    #print("INTENT =", intent)
     
     return intent
 

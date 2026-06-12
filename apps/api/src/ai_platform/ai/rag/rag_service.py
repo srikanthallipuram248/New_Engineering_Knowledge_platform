@@ -33,8 +33,9 @@ class RAGService:
 
     @staticmethod
     def ask(
-        question: str, 
-        history: list = None
+        question: str,
+        history: list = None,
+        uploaded_by: int = None
     ):
         # 1. ANALYZE STEP (NEW)
         analysis = AnalyzeAgent.analyze(
@@ -55,7 +56,8 @@ class RAGService:
         results = HybridSearchService.search(
             query=rewritten_question,
             filters=analysis.get("filters", {}),
-            limit=5
+            limit=5,
+            uploaded_by=uploaded_by
         )
 
         # 3 Build context
@@ -82,7 +84,8 @@ class RAGService:
     @staticmethod
     def retrieve(
         question: str,
-        history: list = None
+        history: list = None,
+        uploaded_by: int = None
     ):
         
         analysis = AnalyzeAgent.analyze(
@@ -100,27 +103,15 @@ class RAGService:
         #New
         results = HybridSearchService.search(
             query=rewritten_question,
-            #New
             filters=analysis.get("filters", {}),
-            limit=5
+            limit=5,
+            uploaded_by=uploaded_by
         )
 
         context = "\n\n".join(
             f"[DOC {i+1}]\n{r['text']}"
             for i, r in enumerate(results)
         )
-        
-        print("\n========== QUESTION ==========")
-        print(rewritten_question)
-
-        print("\n========== RESULTS ==========")
-        for r in results:
-            print("FILE:", r.get("filename"))
-            print("TEXT:", r.get("text")[:300])
-            print("----------------")
-
-        print("\n========== CONTEXT ==========")
-        print(context[:2000])
 
         return {
             "rewritten_question": rewritten_question,

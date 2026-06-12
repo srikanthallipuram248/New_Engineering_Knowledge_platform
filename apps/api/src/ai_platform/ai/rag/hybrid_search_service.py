@@ -21,8 +21,8 @@ class HybridSearchService:
     def search(
         query: str,
         limit: int = 5,
-        #New
-        filters: dict = None
+        filters: dict = None,
+        uploaded_by: int = None
     ):
         
         # vector_results = SearchService.search(
@@ -43,8 +43,9 @@ class HybridSearchService:
 
             results = SearchService.search(
                 query=q,
-                limit=10,
-                filters=filters
+                limit=20,
+                filters=filters,
+                uploaded_by=uploaded_by
             )
 
             all_results.extend(results)
@@ -78,28 +79,14 @@ class HybridSearchService:
         #return vector_results
         #return bm25_results
 
-        return RerankerService.rerank(
+        reranked = RerankerService.rerank(
             query=query,
             results=bm25_results,
             top_k=5
         )
+
+        return reranked
         
-        print("\n===== RERANKED RESULTS =====")
-
-        for r in reranked:
-            print(
-                r["filename"],
-                r["document_id"],
-                r.get("rerank_score")
-            )
-            print(r["text"][:200])
-            print("------------------")
-
-
-
-
-
-
 
 
 

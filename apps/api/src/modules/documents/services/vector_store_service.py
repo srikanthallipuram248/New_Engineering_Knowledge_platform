@@ -19,6 +19,8 @@ class VectorStoreService:
             port=6333
         )
 
+        self.create_collection()
+
     def create_collection(self):
 
         collections = self.client.get_collections()
@@ -70,8 +72,9 @@ class VectorStoreService:
         embedding,
         limit=5,
         score_threshold=0.0,
-        #New
-        filters=None
+        filters=None,
+        uploaded_by=None
+
     ):
 
         # results = self.client.search(
@@ -93,18 +96,33 @@ class VectorStoreService:
 
 
         #New
-        qdrant_filter = None
+        must_conditions = []
+
+        if uploaded_by:
+            must_conditions.append(
+                FieldCondition(
+                    key="uploaded_by",
+                    match=MatchValue(value=uploaded_by)
+                )
+            )
+
         if filters and filters.get("filename"):
 
-            qdrant_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="filename",
-                        match=MatchValue(
-                            value=filters["filename"]
-                        )
+            must_conditions.append(
+                FieldCondition(
+                    key="filename",
+                    match=MatchValue(
+                        value=filters["filename"]
                     )
-                ]
+                )
+            )
+
+        qdrant_filter = None
+
+        if must_conditions:
+
+            qdrant_filter = Filter(
+                must=must_conditions
             )
 
         results = self.client.search(
@@ -129,3 +147,22 @@ class VectorStoreService:
             }
             for result in results
         ]
+    
+    #Delete method
+    def delete_document_vectors(
+        self,
+        document_id
+    ):
+        self.client.delete(
+            collection_name="documents",
+            points_selector=Filter(
+                must=[
+                    FieldCondition(
+                        key="document_id",
+                        match=MatchValue(
+                            value=document_id
+                        )
+                    )
+                ]
+            )
+        )
