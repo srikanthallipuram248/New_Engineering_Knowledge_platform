@@ -1,20 +1,3 @@
-from src.modules.documents.services.search_service import (
-    SearchService
-)
-
-from src.modules.chat.services.llm_service import (
-    LLMService
-)
-
-from src.ai_platform.ai.rag.rag_service import (
-    RAGService
-)
-
-
-from src.ai_platform.ai.rag.rag_service import (
-    RAGService
-)
-
 from src.modules.chat.services.chat_history_service import (
     ChatHistoryService
 )
@@ -23,8 +6,6 @@ from src.modules.chat.services.chat_history_service import (
 from src.ai_platform.ai.workflows.graph.chat_graph import (
     build_chat_graph
 )
-
-
 
 
 class ChatService:
@@ -82,7 +63,8 @@ class ChatService:
                 {
                     "document_id": s["document_id"],
                     "filename": s["filename"],
-                    "rerank_score": s.get("rerank_score", 0)
+                    "rerank_score": s.get("rerank_score", 0),
+                    "snippet": s.get("text", "")[:500]
                 }
             )
 

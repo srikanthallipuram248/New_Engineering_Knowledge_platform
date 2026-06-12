@@ -5,11 +5,18 @@ from src.modules.documents.services.document_processor import (
 def process_document(
     file_path: str
 ):
-    text = DocumentProcessor.extract_text(file_path)
-    
-    chunks = DocumentProcessor.chunk_text(text)
-    
+    text = DocumentProcessor.extract_text(
+        file_path
+    )
+
+    if not text:
+        return []
+
+    chunks = DocumentProcessor.chunk_text(
+        text
+    )
+
     print(f"Text length: {len(text)}")
-    print(f"CHunks Created: {len(chunks)}")
-    
+    print(f"Chunks Created: {len(chunks)}")
+
     return chunks

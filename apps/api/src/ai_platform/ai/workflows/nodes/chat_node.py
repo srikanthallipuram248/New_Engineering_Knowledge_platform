@@ -68,6 +68,7 @@ def rag_node(state):
     # return {
     #     "context": data["context"]
     # }
+    print("RESULT COUNT =", len(data["results"]))
     #New
     return {
         "context": data["context"],

@@ -3,6 +3,10 @@ from src.core.config import settings
 import json
 import re
 
+from src.modules.documents.utils.query_normalizer import (
+    normalize_query
+)
+
 class AnalyzeAgent:
 
     client = Groq(api_key=settings.GROQ_API_KEY)
@@ -10,6 +14,9 @@ class AnalyzeAgent:
     @classmethod
     def analyze(cls, question: str, history=None):
 
+        # Normalize query FIRST
+        question = normalize_query(question)
+        
         messages = [
             {
                 "role": "system",
@@ -84,48 +91,6 @@ If no filters exist:
 
         content = response.choices[0].message.content
 
-        # Convert string → dict
-        # try:
-        #     #return json.loads(content)
-        #     result = json.loads(content)
-        #     print("LLM RESULT =", result)
-        #     filters = result.get("filters") or {}
-
-        #     filename_match = re.search(
-        #         r'([\w\-]+\.(pdf|txt|docx|xlsx|pptx))',
-        #         question,
-        #         re.IGNORECASE
-        #     )
-        #     print("QUESTION =", question)
-        #     print("MATCH =", filename_match)
-            
-        #     if filename_match:
-        #         filters["filename"] = filename_match.group(1)
-
-        #     print("FILTERS =", filters)
-
-        #     result["filters"] = filters
-
-        #     return result
-
-        # except Exception as e:
-        #     # return {
-        #     #     "intent": "rag",
-        #     #     "rewritten_question": question,
-        #     #     "keywords": [],
-        #     #     "filters": {},
-        #     #     "needs_rag": True
-        #     # }
-        #     print("ERROR =", repr(e))
-
-        #     return {
-        #         "intent": "rag",
-        #         "rewritten_question": question,
-        #         "keywords": [],
-        #         "filters": {},
-        #         "needs_rag": True
-        #     }
-
         # -----------------------
         # Parse LLM JSON safely
         # -----------------------
@@ -156,8 +121,8 @@ If no filters exist:
                 
             result = json.loads(cleaned)
         except Exception as e:
-            print("JSON ERROR =", e)
-            print("RAW CONTENT =", content)
+            #print("JSON ERROR =", e)
+           # print("RAW CONTENT =", content)
 
             result = {
                 "intent": "rag",
@@ -184,4 +149,7 @@ If no filters exist:
 
         result["filters"] = filters
 
+        # Force document retrieval
+        result["intent"] = "rag"
+        
         return result

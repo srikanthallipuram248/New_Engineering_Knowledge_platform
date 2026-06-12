@@ -112,6 +112,12 @@ def upload_document(
     db.refresh(document)
     
     chunks = process_document(file_path)
+
+    # This prevents empty files, scanned PDFs with no text
+    if not chunks:
+        return {
+            "message": "No content extracted from document"
+        }
     
     save_chunk = save_chunks(
         db=db,

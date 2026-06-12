@@ -171,15 +171,16 @@ class DocumentProcessor:
         # return chunks
 
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50,
+            chunk_size=1000,
+            chunk_overlap=200,
             separators=[
                 "\n\n",
                 "\n",
                 ". ",
-                " ",
-                ""
+                " "
             ]
         )
 
-        return splitter.split_text(text)
+        chunks = splitter.split_text(text)
+
+        return chunks

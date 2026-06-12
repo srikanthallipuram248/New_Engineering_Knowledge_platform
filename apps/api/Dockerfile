@@ -4,22 +4,24 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PIP_DEFAULT_TIMEOUT=1000
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Required packages
 RUN apt-get update && \
     apt-get install -y \
-        git \
-        antiword && \
+    git \
+    antiword && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 
-COPY requirements/base.txt ./requirements/base.txt
+COPY requirements ./requirements
 
 RUN pip install --no-cache-dir \
-    --timeout 1000 \
-    --retries 20 \
     -r requirements/base.txt
+
+RUN pip install --no-cache-dir \
+    -r requirements/ai.txt
 
 COPY . .
 

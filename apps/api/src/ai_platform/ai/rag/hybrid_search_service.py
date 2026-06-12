@@ -43,7 +43,7 @@ class HybridSearchService:
 
             results = SearchService.search(
                 query=q,
-                limit=20,
+                limit=50,
                 filters=filters,
                 uploaded_by=uploaded_by
             )
@@ -82,10 +82,14 @@ class HybridSearchService:
         reranked = RerankerService.rerank(
             query=query,
             results=bm25_results,
-            top_k=5
+            top_k=10
         )
 
-        return reranked
+        print("VECTOR RESULTS =", len(vector_results))
+        print("BM25 RESULTS =", len(bm25_results))
+        print("RERANK RESULTS =", len(reranked))
+
+        return reranked[:5]
         
 
 
