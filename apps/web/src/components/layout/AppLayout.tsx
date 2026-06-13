@@ -28,13 +28,13 @@ function Shell() {
       {/* Minimal top bar — sign out only. The chat button is the second primary action. */}
       <header className="glass-nav sticky top-0 z-20 flex items-center justify-between border-b px-6 py-3 md:px-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
             <span className="text-[11px] font-bold tracking-tight text-primary-foreground">
               E
             </span>
           </div>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            EKP
+          <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+            Engineering Knowledge Platform
           </span>
         </div>
 
