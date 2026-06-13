@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useMemo,
   type ReactNode,
 } from 'react'
 import { useChatDrawer as useChatDrawerState } from '@/hooks/useChatDrawer'
