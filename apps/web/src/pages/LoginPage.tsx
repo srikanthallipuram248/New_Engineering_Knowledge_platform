@@ -1,11 +1,25 @@
-import React, { useState } from 'react'
-import { login, register } from '../services/api'
+import { useState, type FormEvent } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { BrainCircuit, Sparkles } from 'lucide-react'
+import { motion } from 'motion/react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/hooks/useAuth'
+import { login, register } from '@/services/api'
+import { fadeInUp } from '@/lib/motion-presets'
 
-interface Props {
-  onLogin: () => void
-}
+/**
+ * Placeholder LoginPage for Phase 1.
+ * Phase 2 will replace this with a fully designed glass card experience.
+ */
+export default function LoginPage() {
+  const { setToken } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from
+    ?.pathname ?? '/analyzer'
 
-export default function LoginPage({ onLogin }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,18 +27,17 @@ export default function LoginPage({ onLogin }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
       if (mode === 'register') {
         await register(email, password, fullName)
-        await login(email, password)
-      } else {
-        await login(email, password)
       }
-      onLogin()
+      const token = await login(email, password)
+      setToken(token)
+      navigate(from, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -32,109 +45,119 @@ export default function LoginPage({ onLogin }: Props) {
     }
   }
 
-  const s: Record<string, React.CSSProperties> = {
-    page: {
-      minHeight: '100vh',
-      background: '#f9fafb',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Inter', system-ui, sans-serif",
-    },
-    card: {
-      background: '#fff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '12px',
-      padding: '40px',
-      width: '100%',
-      maxWidth: '400px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-    },
-    title: { fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 24px' },
-    label: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' },
-    input: {
-      width: '100%', padding: '10px 12px', border: '1px solid #d1d5db',
-      borderRadius: '8px', fontSize: '14px', color: '#111827',
-      boxSizing: 'border-box', marginBottom: '16px', outline: 'none',
-    },
-    btn: {
-      width: '100%', padding: '11px', background: '#4f46e5', color: '#fff',
-      border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600',
-      cursor: 'pointer', marginTop: '4px',
-    },
-    toggle: {
-      marginTop: '20px', textAlign: 'center' as const, fontSize: '14px', color: '#6b7280',
-    },
-    link: { color: '#4f46e5', cursor: 'pointer', fontWeight: '600', background: 'none', border: 'none', fontSize: '14px' },
-    error: { color: '#dc2626', fontSize: '13px', marginBottom: '12px' },
-  }
-
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <h1 style={s.title}>
+    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="show"
+        className="glass-strong w-full max-w-md rounded-2xl p-8"
+      >
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20">
+            <BrainCircuit className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold tracking-tight text-foreground">
+              Engineering Knowledge Platform
+            </p>
+            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Sparkles className="h-3 w-3" /> Phase 1 placeholder · full design in
+              Phase 2
+            </p>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           {mode === 'login' ? 'Sign in' : 'Create account'}
         </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {mode === 'login'
+            ? 'Welcome back. Sign in to continue.'
+            : 'Set up your account to get started.'}
+        </p>
 
-        {error && <p style={s.error}>{error}</p>}
+        {error && (
+          <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {mode === 'register' && (
-            <div>
-              <label style={s.label}>Full name</label>
-              <input
-                style={s.input}
-                type="text"
+            <div className="space-y-1.5">
+              <Label htmlFor="fullName">Full name</Label>
+              <Input
+                id="fullName"
                 value={fullName}
-                onChange={e => setFullName(e.target.value)}
+                onChange={(e) => setFullName(e.target.value)}
                 required
                 placeholder="Jane Smith"
               />
             </div>
           )}
-          <div>
-            <label style={s.label}>Email</label>
-            <input
-              style={s.input}
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@company.com"
             />
           </div>
-          <div>
-            <label style={s.label}>Password</label>
-            <input
-              style={s.input}
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
             />
           </div>
-          <button style={s.btn} type="submit" disabled={loading}>
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Register'}
-          </button>
+
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading
+              ? 'Please wait...'
+              : mode === 'login'
+                ? 'Sign in'
+                : 'Create account'}
+          </Button>
         </form>
 
-        <div style={s.toggle}>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           {mode === 'login' ? (
-            <>Don't have an account?{' '}
-              <button style={s.link} onClick={() => { setMode('register'); setError('') }}>
+            <>
+              Don&apos;t have an account?{' '}
+              <button
+                onClick={() => {
+                  setMode('register')
+                  setError('')
+                }}
+                className="font-medium text-primary hover:underline"
+              >
                 Register
               </button>
             </>
           ) : (
-            <>Already have an account?{' '}
-              <button style={s.link} onClick={() => { setMode('login'); setError('') }}>
+            <>
+              Already have an account?{' '}
+              <button
+                onClick={() => {
+                  setMode('login')
+                  setError('')
+                }}
+                className="font-medium text-primary hover:underline"
+              >
                 Sign in
               </button>
             </>
           )}
-        </div>
-      </div>
+        </p>
+      </motion.div>
     </div>
   )
 }

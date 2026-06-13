@@ -1,13 +1,27 @@
-import { useState } from 'react'
-import LoginPage from './pages/LoginPage'
-import AnalyzerPage from './pages/AnalyzerPage'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuroraBackground } from '@/components/layout/AuroraBackground'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { AuthGate } from '@/components/auth/AuthGate'
+import LoginPage from '@/pages/LoginPage'
+import AnalyzerPage from '@/pages/AnalyzerPage'
+import ChatPage from '@/pages/ChatPage'
+import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function App() {
-  const [authed, setAuthed] = useState<boolean>(!!localStorage.getItem('token'))
-
-  if (!authed) {
-    return <LoginPage onLogin={() => setAuthed(true)} />
-  }
-
-  return <AnalyzerPage onLogout={() => setAuthed(false)} />
+  return (
+    <BrowserRouter>
+      <AuroraBackground />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<AuthGate />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<AnalyzerPage />} />
+            <Route path="/analyzer" element={<AnalyzerPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
