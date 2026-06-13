@@ -46,7 +46,7 @@ export function SegmentedControl<T extends string>({
               <motion.div
                 layoutId="segmented-active"
                 className="absolute inset-0 -z-10 rounded-lg bg-background shadow-sm ring-1 ring-foreground/10"
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
               />
             )}
             {option.label}
