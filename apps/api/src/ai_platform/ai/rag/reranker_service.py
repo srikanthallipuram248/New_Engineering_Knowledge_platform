@@ -3,14 +3,7 @@ from sentence_transformers import CrossEncoder
 
 class RerankerService:
 
-    # @staticmethod
-    # def rerank(
-    #     query: str,
-    #     results: list,
-    #     top_k: int = 5
-    # ):
-        
-    #     return results[:top_k]
+    MIN_RERANK_SCORE = -5
 
     model = CrossEncoder(
         "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -19,9 +12,9 @@ class RerankerService:
     @classmethod
     def rerank(
         cls,
-        query,
-        results,
-        top_k=5
+        query: str,
+        results: list,
+        top_k: int = 10
     ):
 
         if not results:
@@ -32,30 +25,34 @@ class RerankerService:
             for r in results
         ]
 
-        scores = cls.model.predict(pairs)
+        scores = cls.model.predict(
+            pairs
+        )
 
-        for result, score in zip(results, scores):
+        for result, score in zip(
+            results,
+            scores
+        ):
             result["rerank_score"] = float(score)
 
         ranked = sorted(
             results,
-            key=lambda x: x["rerank_score"] > -9,
+            key=lambda x: x["rerank_score"],
             reverse=True
         )
 
-        print("\n===== RERANK SCORES =====")
+        filtered = [
+            r 
+            for r in ranked
+            if r["rerank_score"] > cls.MIN_RERANK_SCORE
+        ]
 
-        for r in ranked:
-            print(
-                r["filename"],
-                r["rerank_score"]
-            )
+        print(
+            f"RERANK: input={len(results)} "
+            f"filtered={len(filtered)}"
+        )
 
-        print("=========================\n")
-        return ranked[:top_k]
-
-
-
-
-
-
+        return filtered[:top_k]
+    
+    
+    

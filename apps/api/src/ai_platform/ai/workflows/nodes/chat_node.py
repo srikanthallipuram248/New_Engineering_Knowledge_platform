@@ -61,8 +61,8 @@ def rag_node(state):
     #new
     data = RAGService.retrieve(
         question=state["rewritten_question"],
-        history=state.get("history"),
-        uploaded_by=state.get("uploaded_by")
+        history=state.get("history")
+        #uploaded_by=state.get("uploaded_by")
     )
 
     print("RAG NODE RESULTS =", len(data["results"]))

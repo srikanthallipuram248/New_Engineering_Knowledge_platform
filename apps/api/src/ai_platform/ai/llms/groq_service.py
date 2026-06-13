@@ -21,17 +21,16 @@ class GroqService:
         history=None
     ):
 
-        print("\n===== GROQ =====")
-        print("QUESTION =", question)
-        print("CONTEXT LENGTH =", len(context))
+        print(
+            f"GROQ: question='{question[:80]}' "
+            f"context_length={len(context)}"
+        )
 
-        if context:
-            print("CONTEXT PREVIEW:")
-            print(context[:1000])
-        else:
-            print("CONTEXT IS EMPTY")
+        if not context.strip():
 
-        print("================\n")
+            return (
+                "I don't know based on the uploaded documents."
+            )
 
         messages = [
             {
@@ -40,47 +39,43 @@ class GroqService:
             }
         ]
 
-        # History
-        if history:
-            for msg in history[-10:]:
-                messages.append(
-                    {
-                        "role": msg.role,
-                        "content": msg.content
-                    }
-                )
-        # Single user message containing both context and question
-
         messages.append(
             {
                 "role": "user",
                 "content": f"""
-        CONTEXT:
+CONTEXT:
 
-        {context}
+{context}
 
-        QUESTION:
+QUESTION:
 
-        {question}
-
-        Instructions:
-        - Answer ONLY using the context.
-        - Give a concise answer first.
-        - If available, include relevant supporting details.
-        - If the answer is not present in the context, reply exactly:
-
-        I don't know based on the uploaded documents.
-        """
+{question}
+"""
             }
         )
 
         response = cls.client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
-            temperature=0.1
+            temperature=0.0,
+            max_tokens=1000
         )
 
+        answer = (
+            response
+            .choices[0]
+            .message
+            .content
+            .strip()
+        )
 
-        return response.choices[0].message.content
+        print(
+            f"GROQ: answer_length={len(answer)}"
+        )
+
+        return answer
+    
+    
+    
     
     

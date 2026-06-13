@@ -148,6 +148,7 @@ def upload_document(
             document_id=document.id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
+            uploaded_by_name=user.username,
             text=chunk.chunk_text,
             embedding=embedding
         )
@@ -166,7 +167,8 @@ def upload_document(
 @router.post("/index/{document_id}")
 def index_document(
     document_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
 
     document = db.query(
@@ -206,6 +208,7 @@ def index_document(
             document_id=document_id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
+            uploaded_by_name=user.username,
             text=chunk.chunk_text,
             embedding=embedding
         )
@@ -217,23 +220,6 @@ def index_document(
         "document_id": document_id,
         "chunks_indexed": indexed_count
     }
-
-
-
-
-#vector store
-
-# Keep endpoint for admin/debugging (whenever you want use it)
-# @router.post("/create-vector-db")
-# def create_vector_db():
-
-#     service = VectorStoreService()
-
-#     service.create_collection()
-
-#     return {
-#         "message": "Qdrant collection created"
-#     }
 
 
 #for search
@@ -250,8 +236,8 @@ def search_documents(
     vector_service = VectorStoreService()
 
     results = vector_service.search(
-        embedding,
-        uploaded_by=user.id
+        embedding
+        #uploaded_by=user.id
     )
 
     return {

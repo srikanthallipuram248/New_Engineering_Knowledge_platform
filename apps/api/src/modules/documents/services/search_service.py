@@ -12,8 +12,8 @@ class SearchService:
     def search(
         query: str,
         limit: int = 5,
-        filters: dict = None,
-        uploaded_by: int = None
+        filters: dict = None
+        #uploaded_by: int = None
     ):
         embedding = EmbeddingsService.generate(
             query
@@ -24,8 +24,8 @@ class SearchService:
         return vector_store.search(
             embedding=embedding,
             limit=limit,
-            filters=filters,
-            uploaded_by=uploaded_by
+            filters=filters
+            #uploaded_by=uploaded_by
         )
 
 

@@ -41,13 +41,6 @@ class ChatService:
         )
 
         print("GRAPH RESULT =", result)
-        #return result["answer"]
-
-        #New
-        # return {
-        #     "answer": result["answer"],
-        #     "sources": result.get("sources", [])
-        # }
 
         seen = set()
         sources = []
@@ -64,8 +57,20 @@ class ChatService:
                 {
                     "document_id": s["document_id"],
                     "filename": s["filename"],
-                    "rerank_score": s.get("rerank_score", 0),
-                    "snippet": s.get("text", "")[:500]
+                    "uploaded_by": s.get(
+                        "uploaded_by"
+                    ),
+                    "uploaded_by_name": s.get(
+                        "uploaded_by_name"
+                    ),
+                    "rerank_score": s.get(
+                        "rerank_score",
+                        0
+                    ),
+                    "snippet": s.get(
+                        "text",
+                        ""
+                    )[:500]
                 }
             )
 
