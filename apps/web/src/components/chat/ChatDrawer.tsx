@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState, type FormEvent } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   MessageSquare,
@@ -8,17 +8,25 @@ import {
   Trash2,
   BrainCircuit,
   Loader2,
+  AlertCircle,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fadeInUp } from '@/lib/motion-presets'
 import { useChatDrawerContext } from './ChatDrawerContext'
+import { askChat, getChatHistory } from '@/services/api'
+import type { ChatSource, ChatHistoryMessage } from '@/services/api'
+import { SourceCard } from './SourceCard'
 
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   pending?: boolean
+  failed?: boolean
+  sources?: ChatSource[]
+  createdAt?: string
 }
 
 const STORAGE_KEY = 'ekp.chat.messages'
@@ -30,7 +38,7 @@ const examplePrompts = [
   'What did we decide about caching?',
 ]
 
-function loadMessages(): ChatMessage[] {
+function loadLocalMessages(): ChatMessage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -41,7 +49,7 @@ function loadMessages(): ChatMessage[] {
   }
 }
 
-function persistMessages(messages: ChatMessage[]) {
+function persistLocalMessages(messages: ChatMessage[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
   } catch {
@@ -51,21 +59,25 @@ function persistMessages(messages: ChatMessage[]) {
 
 export function ChatDrawer() {
   const { open, closeDrawer } = useChatDrawerContext()
-  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages)
+  const [messages, setMessages] = useState<ChatMessage[]>(loadLocalMessages)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
+  // Persist locally on every change
   useEffect(() => {
-    persistMessages(messages)
+    persistLocalMessages(messages)
   }, [messages])
 
+  // Auto-scroll to bottom
   useEffect(() => {
     const el = listRef.current
     if (!el) return
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [messages, open])
 
+  // Esc to close
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
@@ -78,40 +90,100 @@ export function ChatDrawer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, closeDrawer])
 
+  // Load server history when the drawer first opens (and we have no local
+  // messages — local cache takes precedence so the user doesn't lose their
+  // thread if they reload)
+  useEffect(() => {
+    if (!open || historyLoaded) return
+    if (messages.length > 0) {
+      setHistoryLoaded(true)
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const history = await getChatHistory()
+        if (cancelled) return
+        if (history.length > 0) {
+          const mapped: ChatMessage[] = history.map((h: ChatHistoryMessage) => ({
+            id: `srv-${h.id}`,
+            role: h.role,
+            content: h.content,
+            createdAt: h.created_at,
+          }))
+          setMessages(mapped)
+        }
+      } catch (err) {
+        // Silently fall back to empty state — drawer still works
+        console.warn('Failed to load chat history', err)
+      } finally {
+        if (!cancelled) setHistoryLoaded(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, historyLoaded, messages.length])
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const content = text.trim()
+      if (!content || sending) return
+
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        createdAt: new Date().toISOString(),
+      }
+      const pendingMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        pending: true,
+      }
+      setMessages((m) => [...m, userMsg, pendingMsg])
+      setDraft('')
+      setSending(true)
+
+      try {
+        const res = await askChat(content)
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === pendingMsg.id
+              ? {
+                  ...msg,
+                  pending: false,
+                  content: res.answer,
+                  sources: res.sources,
+                }
+              : msg,
+          ),
+        )
+      } catch (err: unknown) {
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === pendingMsg.id
+              ? {
+                  ...msg,
+                  pending: false,
+                  failed: true,
+                  content:
+                    err instanceof Error ? err.message : 'Request failed',
+                }
+              : msg,
+          ),
+        )
+      } finally {
+        setSending(false)
+      }
+    },
+    [sending],
+  )
+
   function clearHistory() {
     setMessages([])
-  }
-
-  function sendMessage(text: string) {
-    const content = text.trim()
-    if (!content || sending) return
-
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-    }
-    const pendingMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: '',
-      pending: true,
-    }
-    setMessages((m) => [...m, userMsg, pendingMsg])
-    setDraft('')
-    setSending(true)
-
-    // Phase 3-prep: echo mock. Real backend wiring in Phase 4.
-    setTimeout(() => {
-      setMessages((m) =>
-        m.map((msg) =>
-          msg.id === pendingMsg.id
-            ? { ...msg, pending: false, content: mockAnswer(content) }
-            : msg,
-        ),
-      )
-      setSending(false)
-    }, 900)
   }
 
   function handleSubmit(e: FormEvent) {
@@ -123,7 +195,6 @@ export function ChatDrawer() {
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -135,7 +206,6 @@ export function ChatDrawer() {
             aria-hidden
           />
 
-          {/* Drawer */}
           <motion.aside
             key="drawer"
             role="dialog"
@@ -164,7 +234,7 @@ export function ChatDrawer() {
             <MessageList
               ref={listRef}
               messages={messages}
-              onPickPrompt={sendMessage}
+              onPickPrompt={(p) => sendMessage(p)}
             />
             <InputBar
               draft={draft}
@@ -258,6 +328,7 @@ const MessageList = forwardRef<HTMLDivElement, MessageListProps>(
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
+  const isFailed = message.failed
   return (
     <motion.div
       variants={fadeInUp}
@@ -271,16 +342,43 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
           isUser
             ? 'rounded-br-md bg-primary text-primary-foreground shadow-md shadow-primary/20'
-            : 'glass rounded-bl-md text-foreground',
+            : isFailed
+              ? 'rounded-bl-md border border-destructive/30 bg-destructive/10 text-destructive'
+              : 'glass rounded-bl-md text-foreground',
         )}
       >
         {message.pending ? (
           <TypingDots />
         ) : (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <>
+            {isFailed && (
+              <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider">
+                <AlertCircle className="h-3 w-3" />
+                Failed
+              </div>
+            )}
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            {message.sources && message.sources.length > 0 && (
+              <SourceList sources={message.sources} />
+            )}
+          </>
         )}
       </div>
     </motion.div>
+  )
+}
+
+function SourceList({ sources }: { sources: ChatSource[] }) {
+  return (
+    <div className="mt-3 space-y-1.5 border-t border-foreground/[0.08] pt-2.5">
+      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <BookOpen className="h-3 w-3" />
+        {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+      </p>
+      {sources.map((s, i) => (
+        <SourceCard key={`${s.document_id}-${i}`} source={s} index={i} />
+      ))}
+    </div>
   )
 }
 
@@ -387,8 +485,4 @@ function InputBar({ draft, setDraft, onSubmit, sending }: InputBarProps) {
       </p>
     </form>
   )
-}
-
-function mockAnswer(question: string): string {
-  return `This is a Phase 3 prep echo. You asked: "${question}".\n\nIn Phase 4 this will call POST /api/v1/chat and stream the RAG-grounded answer back.`
 }
