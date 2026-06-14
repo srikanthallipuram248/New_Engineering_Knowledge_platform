@@ -60,12 +60,6 @@ class HybridSearchService:
         )
 
         if not vector_results:
-
-            print(
-                f"HYBRID: query='{query}' "
-                f"vector_results=0"
-            )
-
             return []
 
         bm25_results = BM25Service.search(
@@ -75,12 +69,6 @@ class HybridSearchService:
         )
 
         if not bm25_results:
-
-            print(
-                f"HYBRID: query='{query}' "
-                f"bm25_results=0"
-            )
-
             return []
 
         reranked = RerankerService.rerank(
@@ -90,12 +78,6 @@ class HybridSearchService:
         )
 
         if not reranked:
-
-            print(
-                f"HYBRID: query='{query}' "
-                f"reranked=0"
-            )
-
             return []
 
         print(

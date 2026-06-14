@@ -78,34 +78,8 @@ class VectorStoreService:
         #uploaded_by=None
     ):
 
-        # results = self.client.search(
-        #     collection_name="documents",
-        #     query_vector=embedding,
-        #     limit=limit
-        #     #score_threshold=score_threshold
-        # )
-
-        # return [
-        #     {
-        #         "score": result.score,
-        #         "text": result.payload.get("text", ""),
-        #         "document_id": result.payload.get("document_id"),
-        #         "filename": result.payload.get("filename")
-        #     }
-        #     for result in results
-        # ]
-
-
         #New
         must_conditions = []
-
-        # if uploaded_by:
-        #     must_conditions.append(
-        #         FieldCondition(
-        #             key="uploaded_by",
-        #             match=MatchValue(value=uploaded_by)
-        #         )
-        #     )
 
         if filters and filters.get("filename"):
 
@@ -132,25 +106,17 @@ class VectorStoreService:
             limit=limit,
             query_filter=qdrant_filter
         )
+        
+        for result in results:
+            print("PAYLOAD =", result.payload)
 
-        print("QDRANT FILTER =", qdrant_filter)
-        #print("UPLOADED BY =", uploaded_by)
         return [
             {
                 "score": result.score,
-                "text": result.payload.get(
-                    "text",
-                    ""
-                ),
-                "document_id": result.payload.get(
-                    "document_id"
-                ),
-                "filename": result.payload.get(
-                    "filename"
-                ),
-                "uploaded_by": result.payload.get(
-                    "uploaded_by"
-                ),
+                "text": result.payload.get("text", ""),
+                "document_id": result.payload.get("document_id"),
+                "filename": result.payload.get("filename"),
+                "uploaded_by": result.payload.get("uploaded_by"),
                 "uploaded_by_name": result.payload.get(
                     "uploaded_by_name"
                 )

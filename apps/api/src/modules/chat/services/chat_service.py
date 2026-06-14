@@ -25,13 +25,6 @@ class ChatService:
         #update graph
         graph = build_chat_graph()
 
-        # return RAGService.ask(
-        #     question=question,
-        #     history=history
-        # )
-
-        #New graph code
-        print("USER ID =", user.id)
         result = graph.invoke(
             {
                 "question": question,
@@ -40,7 +33,10 @@ class ChatService:
             }
         )
 
-        print("GRAPH RESULT =", result)
+        print(
+            "SOURCE SAMPLE =",
+            result.get("sources", [])
+        )
 
         seen = set()
         sources = []

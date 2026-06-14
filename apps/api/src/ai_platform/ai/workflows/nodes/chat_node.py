@@ -64,9 +64,6 @@ def rag_node(state):
         history=state.get("history")
         #uploaded_by=state.get("uploaded_by")
     )
-
-    print("RAG NODE RESULTS =", len(data["results"]))
-    print("RAG NODE CONTEXT =", len(data["context"]))
     #New
     return {
         "context": data["context"],

@@ -161,14 +161,6 @@ class AnalyzeAgent:
                 "needs_rag": True
             }
 
-            
-            print(
-                f"[ANALYZE] "
-                f"history=False "
-                f"keywords={result['keywords']} "
-                f"filters={result['filters']}"
-            )
-
             return result
 
         messages = [
@@ -241,10 +233,6 @@ class AnalyzeAgent:
                 result["rewritten_question"] = original_question
 
         except Exception as e:
-
-            print(
-                f"[ANALYZE ERROR] {repr(e)}"
-            )
             result = {
                 "intent": "rag",
                 "rewritten_question": original_question,
@@ -277,13 +265,6 @@ class AnalyzeAgent:
                     question
                 )
             )
-
-        print(
-            f"[ANALYZE] "
-            f"history={use_history} "
-            f"keywords={result.get('keywords', [])} "
-            f"filters={result.get('filters', {})}"
-        )
 
         return result
     

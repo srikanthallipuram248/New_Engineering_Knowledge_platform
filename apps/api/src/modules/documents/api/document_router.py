@@ -8,6 +8,7 @@ from src.core.database import get_db
 
 from src.shared.dependencies import get_current_user
 from src.modules.documents.models.document import Document
+from src.modules.users.models.user import User
 
 from src.modules.documents.tasks.process_document import (
     process_document
@@ -41,6 +42,7 @@ from src.modules.documents.services.embedding_service import (
 from src.modules.documents.utils.file_hash import (
     calculate_file_hash
 )
+
 
 
 
@@ -148,7 +150,7 @@ def upload_document(
             document_id=document.id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
-            uploaded_by_name=user.username,
+            uploaded_by_name=user.full_name,
             text=chunk.chunk_text,
             embedding=embedding
         )
@@ -195,6 +197,12 @@ def index_document(
 
     vector_service = VectorStoreService()
 
+    uploader = db.query(
+        User
+    ).filter(
+        User.id == document.uploaded_by
+    ).first()
+
     indexed_count = 0
 
     for chunk in chunks:
@@ -208,7 +216,7 @@ def index_document(
             document_id=document_id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
-            uploaded_by_name=user.username,
+            uploaded_by_name=uploader.full_name,
             text=chunk.chunk_text,
             embedding=embedding
         )

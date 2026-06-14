@@ -128,11 +128,6 @@ CONTENT:
         )
 
         if not results:
-
-            print(
-                f"RAG: query='{rewritten_question}' results=0"
-            )
-
             return {
                 "rewritten_question": rewritten_question,
                 "context": "",
@@ -145,12 +140,6 @@ CONTENT:
         )
 
         if best_score < -5:
-
-            print(
-                f"RAG: query='{rewritten_question}' "
-                f"rejected score={best_score}"
-            )
-
             return {
                 "rewritten_question": rewritten_question,
                 "context": "",
