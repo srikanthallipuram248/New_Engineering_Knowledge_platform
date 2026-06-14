@@ -1,30 +1,58 @@
-import React, { useState } from 'react'
-import { login, register } from '../services/api'
+import { useState, type FormEvent } from 'react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'motion/react'
+import {
+  BrainCircuit,
+  Sparkles,
+  Mail,
+  Lock,
+  User as UserIcon,
+  ArrowRight,
+  AlertCircle,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Loader } from '@/components/ui/loader'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import { useAuth } from '@/hooks/useAuth'
+import { login, register } from '@/services/api'
+import { fadeInUp, staggerContainer } from '@/lib/motion-presets'
+import { cn } from '@/lib/utils'
 
-interface Props {
-  onLogin: () => void
-}
+type Mode = 'login' | 'register'
 
-export default function LoginPage({ onLogin }: Props) {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+const modeOptions: { value: Mode; label: string }[] = [
+  { value: 'login', label: 'Sign in' },
+  { value: 'register', label: 'Create account' },
+]
+
+export default function LoginPage() {
+  const { setToken } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const from =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ??
+    '/analyzer'
+
+  const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
       if (mode === 'register') {
         await register(email, password, fullName)
-        await login(email, password)
-      } else {
-        await login(email, password)
       }
-      onLogin()
+      const token = await login(email, password)
+      setToken(token)
+      navigate(from, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -32,108 +60,201 @@ export default function LoginPage({ onLogin }: Props) {
     }
   }
 
-  const s: Record<string, React.CSSProperties> = {
-    page: {
-      minHeight: '100vh',
-      background: '#f9fafb',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Inter', system-ui, sans-serif",
-    },
-    card: {
-      background: '#fff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '12px',
-      padding: '40px',
-      width: '100%',
-      maxWidth: '400px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-    },
-    title: { fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 24px' },
-    label: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' },
-    input: {
-      width: '100%', padding: '10px 12px', border: '1px solid #d1d5db',
-      borderRadius: '8px', fontSize: '14px', color: '#111827',
-      boxSizing: 'border-box', marginBottom: '16px', outline: 'none',
-    },
-    btn: {
-      width: '100%', padding: '11px', background: '#4f46e5', color: '#fff',
-      border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600',
-      cursor: 'pointer', marginTop: '4px',
-    },
-    toggle: {
-      marginTop: '20px', textAlign: 'center' as const, fontSize: '14px', color: '#6b7280',
-    },
-    link: { color: '#4f46e5', cursor: 'pointer', fontWeight: '600', background: 'none', border: 'none', fontSize: '14px' },
-    error: { color: '#dc2626', fontSize: '13px', marginBottom: '12px' },
+  function switchMode(next: Mode) {
+    if (next === mode) return
+    setMode(next)
+    setError('')
   }
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <h1 style={s.title}>
-          {mode === 'login' ? 'Sign in' : 'Create account'}
-        </h1>
-
-        {error && <p style={s.error}>{error}</p>}
-
-        <form onSubmit={handleSubmit}>
-          {mode === 'register' && (
-            <div>
-              <label style={s.label}>Full name</label>
-              <input
-                style={s.input}
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                required
-                placeholder="Jane Smith"
-              />
+    <div className="flex min-h-screen items-center justify-center px-6 py-12">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="w-full max-w-md"
+      >
+        {/* Logo + wordmark */}
+        <motion.div
+          variants={fadeInUp}
+          className="mb-8 flex flex-col items-center text-center"
+        >
+          <div className="relative">
+            <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-primary to-accent opacity-50 blur-2xl" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-xl shadow-primary/30">
+              <BrainCircuit className="h-7 w-7 text-primary-foreground" />
             </div>
-          )}
-          <div>
-            <label style={s.label}>Email</label>
-            <input
-              style={s.input}
+          </div>
+          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
+            Engineering Knowledge Platform
+          </h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Two agents, one knowledge base
+          </p>
+        </motion.div>
+
+        {/* Card */}
+        <motion.div
+          variants={fadeInUp}
+          className="glass-strong rounded-2xl p-8 shadow-2xl shadow-black/20"
+        >
+          {/* Mode toggle */}
+          <div className="mb-6 flex justify-center">
+            <SegmentedControl
+              options={modeOptions}
+              value={mode}
+              onChange={switchMode}
+            />
+          </div>
+
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -8, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="leading-relaxed">{error}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <AnimatePresence initial={false}>
+              {mode === 'register' && (
+                <motion.div
+                  key="fullName"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <Field
+                    id="fullName"
+                    label="Full name"
+                    icon={UserIcon}
+                    value={fullName}
+                    onChange={setFullName}
+                    placeholder="Jane Smith"
+                    autoComplete="name"
+                    required
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Field
+              id="email"
+              label="Email"
+              icon={Mail}
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
+              onChange={setEmail}
               placeholder="you@company.com"
+              autoComplete="email"
+              required
             />
-          </div>
-          <div>
-            <label style={s.label}>Password</label>
-            <input
-              style={s.input}
+
+            <Field
+              id="password"
+              label="Password"
+              icon={Lock}
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
+              onChange={setPassword}
               placeholder="••••••••"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              required
             />
-          </div>
-          <button style={s.btn} type="submit" disabled={loading}>
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Register'}
-          </button>
-        </form>
 
-        <div style={s.toggle}>
-          {mode === 'login' ? (
-            <>Don't have an account?{' '}
-              <button style={s.link} onClick={() => { setMode('register'); setError('') }}>
-                Register
-              </button>
-            </>
-          ) : (
-            <>Already have an account?{' '}
-              <button style={s.link} onClick={() => { setMode('login'); setError('') }}>
-                Sign in
-              </button>
-            </>
+            <Button
+              type="submit"
+              disabled={loading}
+              size="lg"
+              className="mt-2 w-full"
+            >
+              {loading ? (
+                <Loader size="sm" className="text-primary-foreground" />
+              ) : (
+                <>
+                  {mode === 'login' ? 'Sign in' : 'Create account'}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        </motion.div>
+
+        {/* Footer hint */}
+        <motion.p
+          variants={fadeInUp}
+          className="mt-6 text-center text-xs text-muted-foreground"
+        >
+          By continuing, you agree to our{' '}
+          <Link to="#" className="text-foreground/70 underline-offset-4 hover:underline">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link to="#" className="text-foreground/70 underline-offset-4 hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </motion.p>
+      </motion.div>
+    </div>
+  )
+}
+
+interface FieldProps {
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  type?: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  autoComplete?: string
+  required?: boolean
+}
+
+function Field({
+  id,
+  label,
+  icon: Icon,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  required,
+}: FieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Icon
+          className={cn(
+            'pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60',
           )}
-        </div>
+        />
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          required={required}
+          className="pl-10"
+        />
       </div>
     </div>
   )
