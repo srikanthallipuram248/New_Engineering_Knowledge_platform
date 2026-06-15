@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { AuthGate } from '@/components/auth/AuthGate'
 import LoginPage from '@/pages/LoginPage'
 import AnalyzerPage from '@/pages/AnalyzerPage'
+import LibraryPage from '@/pages/LibraryPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { useChatDrawerContext } from '@/components/chat/ChatDrawerContext'
 
@@ -18,6 +19,7 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route index element={<AnalyzerPage />} />
             <Route path="/analyzer" element={<AnalyzerPage />} />
+            <Route path="/library" element={<LibraryPage />} />
             <Route path="/chat" element={<ChatRedirect />} />
           </Route>
         </Route>

@@ -1,10 +1,11 @@
-import { Outlet, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { Outlet, useNavigate, NavLink } from 'react-router-dom'
+import { LogOut, BookOpen, ScanSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatDrawer } from '@/components/chat/ChatDrawer'
 import { ChatDrawerProvider } from '@/components/chat/ChatDrawerContext'
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton'
 import { useAuth } from '@/hooks/useAuth'
+import { cn } from '@/lib/utils'
 
 export function AppLayout() {
   return (
@@ -25,9 +26,13 @@ function Shell() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      {/* Minimal top bar — sign out only. The chat button is the second primary action. */}
+      {/* Top bar: wordmark (links to /analyzer) + center nav + sign out */}
       <header className="glass-nav sticky top-0 z-20 flex items-center justify-between border-b px-6 py-3 md:px-10">
-        <div className="flex items-center gap-2.5">
+        <NavLink
+          to="/analyzer"
+          className="flex min-w-0 items-center gap-2.5"
+          aria-label="Go to home"
+        >
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/20">
             <span className="text-[11px] font-bold tracking-tight text-primary-foreground">
               E
@@ -36,7 +41,12 @@ function Shell() {
           <span className="truncate text-sm font-semibold tracking-tight text-foreground">
             Engineering Knowledge Platform
           </span>
-        </div>
+        </NavLink>
+
+        <nav className="flex items-center gap-1">
+          <TopNavLink to="/analyzer" icon={ScanSearch} label="Analyzer" />
+          <TopNavLink to="/library" icon={BookOpen} label="Library" />
+        </nav>
 
         <Button
           variant="ghost"
@@ -58,5 +68,30 @@ function Shell() {
       <FloatingChatButton />
       <ChatDrawer />
     </div>
+  )
+}
+
+interface TopNavLinkProps {
+  to: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+}
+
+function TopNavLink({ to, icon: Icon, label }: TopNavLinkProps) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+          isActive
+            ? 'bg-foreground/[0.05] text-foreground'
+            : 'text-muted-foreground hover:bg-foreground/[0.03] hover:text-foreground',
+        )
+      }
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">{label}</span>
+    </NavLink>
   )
 }
