@@ -14,6 +14,22 @@ function authHeaders(): HeadersInit {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    // 401 = token expired/invalid. Clear it and bounce to /login so
+    // the user gets a clear "session expired" flow instead of being
+    // stuck on a half-broken page.
+    if (res.status === 401) {
+      try {
+        localStorage.removeItem('token')
+      } catch {
+        /* ignore */
+      }
+      // Only redirect if we're not already on the login page
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.replace(`/login?expired=1&next=${next}`)
+      }
+      throw new Error('Your session has expired — please sign in again.')
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'Request failed')
   }
@@ -53,7 +69,7 @@ export function logout(): void {
 // ── Analyzer ──────────────────────────────────────────────────────────────
 
 export interface KeyModule { name: string; role: string }
-export interface Feature   { name: string; description: string; evidence: string }
+export interface Feature { name: string; description: string; evidence: string }
 export interface CommandInfo { command: string; purpose: string }
 
 export interface RepoAnalysisResult {
@@ -74,20 +90,17 @@ export interface RepoAnalysisResult {
   readme_found: boolean
 }
 
-export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
-  const res = await fetch(`${BASE}/analyzer/analyze`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ git_url: gitUrl }),
-  })
-  return handleResponse<RepoAnalysisResult>(res)
-}
+// ── Chat (Agent 2) ──────────────────────────────────────────────────────
 
-// ── Chat ─────────────────────────────────────────────────────────────────
-
+/**
+ * A source citation returned with each chat answer. `uploaded_by_name`
+ * may be null on older backend records — handle both.
+ */
 export interface ChatSource {
   document_id: number
   filename: string
+  uploaded_by?: number | null
+  uploaded_by_name?: string | null
   rerank_score: number
   snippet: string
 }
@@ -98,9 +111,9 @@ export interface ChatApiResponse {
 }
 
 /**
- * History row as returned by GET /chat/history.
- * Sources are NOT persisted (they're returned inline on POST /chat),
- * so history rows only carry role + content.
+ * History row as returned by GET /chat/history. Sources are NOT
+ * persisted (they're returned inline on POST /chat) — history rows
+ * only carry role + content.
  */
 export interface ChatHistoryMessage {
   id: number
@@ -110,11 +123,14 @@ export interface ChatHistoryMessage {
   created_at: string
 }
 
-export async function askChat(question: string): Promise<ChatApiResponse> {
+export async function askChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
+    }),
   })
   return handleResponse<ChatApiResponse>(res)
 }
@@ -124,6 +140,15 @@ export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
     headers: authHeaders(),
   })
   return handleResponse<ChatHistoryMessage[]>(res)
+}
+
+export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
+  const res = await fetch(`${BASE}/analyzer/analyze`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ git_url: gitUrl }),
+  })
+  return handleResponse<RepoAnalysisResult>(res)
 }
 
 // ── Documents / Library ─────────────────────────────────────────────────
@@ -201,6 +226,23 @@ export function uploadDocument(
         } catch (err) {
           reject(new Error('Invalid server response'))
         }
+      } else if (xhr.status === 401) {
+        // Token expired/invalid — same bounce-to-login treatment as
+        // handleResponse so the user is never stuck looking at a
+        // half-broken page.
+        try {
+          localStorage.removeItem('token')
+        } catch {
+          /* ignore */
+        }
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.startsWith('/login')
+        ) {
+          const next = encodeURIComponent(window.location.pathname + window.location.search)
+          window.location.replace(`/login?expired=1&next=${next}`)
+        }
+        reject(new Error('Your session has expired — please sign in again.'))
       } else {
         // Try to extract the backend's `detail` field
         let detail = xhr.statusText

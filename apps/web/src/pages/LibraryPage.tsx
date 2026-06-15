@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   BookOpen,
@@ -18,11 +18,19 @@ import {
   LibraryFileRow,
   type UploadItemState,
 } from '@/components/library/FileRow'
+import { LibraryChatPanel } from '@/components/library/LibraryChatPanel'
 import { cn } from '@/lib/utils'
 
 export default function LibraryPage() {
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [uploads, setUploads] = useState<UploadItemState[]>([])
+  // When a source card in the chat is clicked, briefly highlight the
+  // matching file in the library list and scroll it into view.
+  const [highlightedDocId, setHighlightedDocId] = useState<number | null>(null)
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Count of documents that have finished uploading since the last
+  // "new chat" acknowledgement. Drives a banner in the chat panel.
+  const [newlyUploadedCount, setNewlyUploadedCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -56,20 +64,18 @@ export default function LibraryPage() {
 
   const handleFiles = useCallback(
     async (files: File[]) => {
-      // Push all files into the queue as 'queued', then start uploading one by one
-      const newUploads: { id: string; state: UploadItemState }[] = files.map(
-        (file) => ({
-          id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()
-            .toString(36)
-            .slice(2, 8)}`,
-          state: { kind: 'queued', file },
-        }),
-      )
-      setUploads((prev) => [...newUploads.map((n) => n.state), ...prev])
+      // Build upload items with a stable id (derived from file properties)
+      // and push them all into the queue in one update.
+      const newUploads: UploadItemState[] = files.map((file) => ({
+        kind: 'queued',
+        file,
+      }))
+      setUploads((prev) => [...newUploads, ...prev])
 
-      // Kick off each upload in parallel — backend handles concurrency
-      for (const { id, state } of newUploads) {
-        void runUpload(id, state.file, updateUpload, setDocs)
+      // Kick off each upload in parallel — backend handles concurrency.
+      // runUpload uses getUploadId(u) (file-derived) to look up state.
+      for (const file of files) {
+        void runUpload(file, updateUpload, setDocs, setNewlyUploadedCount)
       }
     },
     [updateUpload],
@@ -102,13 +108,42 @@ export default function LibraryPage() {
     }
   }, [])
 
+  const handleClearDocs = useCallback(async () => {
+    const snapshot = [...docs]
+    setDocs([])
+    try {
+      await Promise.all(snapshot.map((doc) => deleteDocument(doc.id)))
+    } catch (err: unknown) {
+      setDocs(snapshot)
+      setUploads((prev) => [
+        {
+          kind: 'failed',
+          file: new File([], 'All Documents'),
+          error: err instanceof Error ? err.message : 'Clear failed',
+        },
+        ...prev,
+      ])
+    }
+  }, [docs])
+
+  const handleSourceClick = useCallback((documentId: number) => {
+    setHighlightedDocId(documentId)
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = setTimeout(() => setHighlightedDocId(null), 2000)
+    // Scroll the matching list item into view
+    const el = document.querySelector(`[data-doc-id="${documentId}"]`)
+    if (el && 'scrollIntoView' in el) {
+      ;(el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [])
+
   const totalCount = docs.length
   const isUploading = uploads.some(
     (u) => u.kind === 'uploading' || u.kind === 'processing' || u.kind === 'queued',
   )
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page header */}
       <motion.header
         initial={{ opacity: 0, y: 8 }}
@@ -125,99 +160,131 @@ export default function LibraryPage() {
           </h1>
         </div>
         <p className="text-sm text-muted-foreground sm:text-[15px]">
-          Upload documents that Agent 2 will read from when you chat. The
-          bigger your library, the better its answers.
+          Upload documents on the left, chat with them on the right. The
+          bigger your library, the better Agent 2's answers.
         </p>
       </motion.header>
 
-      {/* Stats row */}
-      <div className="flex flex-wrap items-center gap-3">
-        <StatChip
-          icon={BookOpen}
-          label="Documents"
-          value={totalCount.toString()}
-          tone="primary"
-        />
-        <StatChip
-          icon={Sparkles}
-          label="In flight"
-          value={uploads.filter((u) => !u.kind.match(/done|failed/)).length.toString()}
-          tone={isUploading ? 'accent' : 'muted'}
-        />
-      </div>
-
-      {/* Drop zone */}
-      <FileDropZone onFiles={handleFiles} disabled={isUploading && false} />
-
-      {/* In-flight uploads */}
-      <AnimatePresence>
-        {uploads.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-2"
-          >
-            <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Activity
-            </h2>
-            <ul className="space-y-2">
-              <AnimatePresence initial={false}>
-                {uploads.map((u) => (
-                  <li key={getUploadId(u)}>
-                    <FileRow
-                      state={u}
-                      onRemove={
-                        u.kind === 'uploading' || u.kind === 'queued'
-                          ? () => removeUpload(getUploadId(u))
-                          : undefined
-                      }
-                      onDismissError={
-                        u.kind === 'failed'
-                          ? () => dismissError(getUploadId(u))
-                          : undefined
-                      }
-                    />
-                  </li>
-                ))}
-              </AnimatePresence>
-            </ul>
-          </motion.section>
-        )}
-      </AnimatePresence>
-
-      {/* Library list */}
-      <section className="space-y-2">
-        <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <FileText className="h-3 w-3" />
-          Your library
-          <span className="ml-1 rounded-full bg-foreground/[0.04] px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-            {totalCount}
-          </span>
-        </h2>
-
-        {loading ? (
-          <SkeletonRows count={3} />
-        ) : loadError ? (
-          <div className="glass flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            {loadError}
+      {/* Two-pane: library management + chat */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        {/* Left pane: stats + drop zone + activity + file list */}
+        <div className="space-y-4">
+          {/* Stats row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <StatChip
+              icon={BookOpen}
+              label="Documents"
+              value={totalCount.toString()}
+              tone="primary"
+            />
+            <StatChip
+              icon={Sparkles}
+              label="In flight"
+              value={uploads
+                .filter((u) => !u.kind.match(/done|failed/))
+                .length.toString()}
+              tone={isUploading ? 'accent' : 'muted'}
+            />
           </div>
-        ) : docs.length === 0 ? (
-          <EmptyLibrary />
-        ) : (
-          <ul className="space-y-2">
-            <AnimatePresence initial={false}>
-              {docs.map((doc) => (
-                <li key={doc.id}>
-                  <LibraryFileRow doc={doc} onDelete={() => handleDeleteDoc(doc)} />
-                </li>
-              ))}
-            </AnimatePresence>
-          </ul>
-        )}
-      </section>
+
+          {/* Drop zone */}
+          <FileDropZone onFiles={handleFiles} disabled={false} />
+
+          {/* In-flight uploads */}
+          <AnimatePresence>
+            {uploads.length > 0 && (
+              <motion.section
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-2"
+              >
+                <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  Activity
+                </h2>
+                <ul className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {uploads.map((u) => (
+                      <li key={getUploadId(u)}>
+                        <FileRow
+                          state={u}
+                          onRemove={
+                            u.kind === 'uploading' || u.kind === 'queued'
+                              ? () => removeUpload(getUploadId(u))
+                              : undefined
+                          }
+                          onDismissError={
+                            u.kind === 'failed'
+                              ? () => dismissError(getUploadId(u))
+                              : undefined
+                          }
+                        />
+                      </li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          {/* Library list */}
+          <section className="space-y-2">
+            <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <FileText className="h-3 w-3" />
+              Your library
+              <span className="ml-1 rounded-full bg-foreground/[0.04] px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {totalCount}
+              </span>
+            </h2>
+
+            {loading ? (
+              <SkeletonRows count={3} />
+            ) : loadError ? (
+              <div className="glass flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                {loadError}
+              </div>
+            ) : docs.length === 0 ? (
+              <EmptyLibrary />
+            ) : (
+              <ul className="space-y-2">
+                <AnimatePresence initial={false}>
+                  {docs.map((doc) => (
+                    <li
+                      key={doc.id}
+                      data-doc-id={doc.id}
+                      className={cn(
+                        'rounded-xl transition-all',
+                        highlightedDocId === doc.id &&
+                          'ring-2 ring-primary/60 shadow-[0_0_24px_-8px_hsl(248_90%_60%/0.5)]',
+                      )}
+                    >
+                      <LibraryFileRow
+                        doc={doc}
+                        onDelete={() => handleDeleteDoc(doc)}
+                      />
+                    </li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* Right pane: chat */}
+        <div className="h-[calc(100vh-12rem)] min-h-[500px]">
+          <LibraryChatPanel
+            docCount={totalCount}
+            docNames={docs.map((d) => d.file_name)}
+            docs={docs}
+            onSourceClick={handleSourceClick}
+            newlyUploadedCount={newlyUploadedCount}
+            onAcknowledgeNewUploads={() => setNewlyUploadedCount(0)}
+            onClearDocs={handleClearDocs}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -315,11 +382,13 @@ function getUploadId(u: UploadItemState): string {
  * Side-effects: updateUpload() to mutate state, setDocs() to append on success.
  */
 async function runUpload(
-  id: string,
   file: File,
   updateUpload: (id: string, updater: (s: UploadItemState) => UploadItemState) => void,
   setDocs: React.Dispatch<React.SetStateAction<LibraryDocument[]>>,
+  setNewlyUploadedCount: React.Dispatch<React.SetStateAction<number>>,
 ) {
+  const id = getUploadId({ kind: 'queued', file })
+
   updateUpload(id, () => ({ kind: 'uploading', file, loaded: 0, total: file.size }))
 
   try {
@@ -357,6 +426,13 @@ async function runUpload(
         documentId: res.document_id!,
         chunks: res.chunks_indexed ?? 0,
       }))
+      // Bump the "new uploads since last new-chat" counter so the
+      // chat panel can prompt the user to start a focused thread.
+      // (Only for successful uploads, not duplicates — duplicates
+      // don't add anything new to chat about.)
+      if (success) {
+        setNewlyUploadedCount((c) => c + 1)
+      }
       // Add the doc to the library list optimistically
       setDocs((prev) => {
         if (prev.some((d) => d.id === res.document_id)) return prev
