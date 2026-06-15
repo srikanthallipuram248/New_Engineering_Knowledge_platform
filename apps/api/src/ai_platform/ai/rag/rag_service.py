@@ -13,12 +13,46 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 
 class RAGService:
 
+    SEARCH_LIMIT = 15
+    CONTEXT_LIMIT = 10
+    MAX_CONTEXT_CHARS = 30000
+
+    @staticmethod
+    def build_context(results):
+
+        top_results = results[
+            :RAGService.CONTEXT_LIMIT
+        ]
+
+        context_parts = []
+
+        for r in top_results:
+
+            context_parts.append(
+                f"""
+FILENAME: {r['filename']}
+DOCUMENT_ID: {r['document_id']}
+
+CONTENT:
+{r['text']}
+"""
+            )
+
+        context = "\n\n".join(
+            context_parts
+        )
+
+        return context[
+            :RAGService.MAX_CONTEXT_CHARS
+        ]
+
     @staticmethod
     def ask(
         question: str,
-        history: list = None,
-        uploaded_by: int = None
+        history: list = None
+        #uploaded_by: int = None
     ):
+
         analysis = AnalyzeAgent.analyze(
             question,
             history
@@ -34,22 +68,29 @@ class RAGService:
                 "filters",
                 {}
             ),
-            limit=5,
-            uploaded_by=uploaded_by
+            limit=RAGService.SEARCH_LIMIT
+            #uploaded_by=uploaded_by
         )
 
-        top_results = results[:3]
+        if not results:
+            return (
+                "I don't know based on "
+                "the uploaded documents."
+            )
 
-        context = "\n\n".join(
-            f"""
-FILENAME: {r['filename']}
-DOCUMENT_ID: {r['document_id']}
-RELEVANCE_SCORE: {r.get('rerank_score', r.get('score', 0))}
+        best_score = results[0].get(
+            "rerank_score",
+            0
+        )
 
-CONTENT:
-{r['text']}
-"""
-            for r in top_results
+        if best_score < -5:
+            return (
+                "I don't know based on "
+                "the uploaded documents."
+            )
+
+        context = RAGService.build_context(
+            results
         )
 
         answer = GroqService.generate(
@@ -63,8 +104,8 @@ CONTENT:
     @staticmethod
     def retrieve(
         question: str,
-        history: list = None,
-        uploaded_by: int = None
+        history: list = None
+        #uploaded_by: int = None
     ):
 
         analysis = AnalyzeAgent.analyze(
@@ -82,43 +123,46 @@ CONTENT:
                 "filters",
                 {}
             ),
-            limit=5,
-            uploaded_by=uploaded_by
+            limit=RAGService.SEARCH_LIMIT
+            #uploaded_by=uploaded_by
         )
 
-        print("\n===== FINAL RANKING =====")
+        if not results:
+            return {
+                "rewritten_question": rewritten_question,
+                "context": "",
+                "results": []
+            }
 
-        for r in results:
-            print(
-                f"{r['filename']} | "
-                f"Score={r.get('rerank_score', r.get('score', 0))}"
-            )
-
-        print("=========================\n")
-
-        top_results = results[:3]
-
-        context = "\n\n".join(
-            f"""
-FILENAME: {r['filename']}
-DOCUMENT_ID: {r['document_id']}
-RELEVANCE_SCORE: {r.get('rerank_score', r.get('score', 0))}
-
-CONTENT:
-{r['text']}
-"""
-            for r in top_results
+        best_score = results[0].get(
+            "rerank_score",
+            0
         )
 
-        print("\n===== RETRIEVE =====")
-        print("QUESTION =", rewritten_question)
-        print("RESULTS =", len(results))
-        print("CONTEXT LENGTH =", len(context))
-        print(context[:1000])
-        print("====================\n")
+        if best_score < -5:
+            return {
+                "rewritten_question": rewritten_question,
+                "context": "",
+                "results": []
+            }
+
+        context = RAGService.build_context(
+            results
+        )
+
+        print(
+            f"RAG: query='{rewritten_question}' "
+            f"results={len(results)} "
+            f"context_chunks="
+            f"{min(len(results), RAGService.CONTEXT_LIMIT)}"
+        )
 
         return {
             "rewritten_question": rewritten_question,
             "context": context,
             "results": results
         }
+        
+        
+        
+        

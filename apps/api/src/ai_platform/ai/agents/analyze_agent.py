@@ -5,18 +5,64 @@ import json
 import re
 
 from src.modules.documents.utils.query_normalizer import (
-normalize_query
+    normalize_query
 )
 
 from src.ai_platform.ai.prompts.analyze_prompt import (
-ANALYZE_SYSTEM_PROMPT
+    ANALYZE_SYSTEM_PROMPT
 )
+
 
 class AnalyzeAgent:
 
     client = Groq(
         api_key=settings.GROQ_API_KEY
     )
+
+    FOLLOWUP_WORDS = {
+        "it",
+        "this",
+        "that",
+        "these",
+        "those",
+        "they",
+        "them",
+        "earlier",
+        "previous",
+        "previously",
+        "continue",
+        "more",
+        "above",
+        "below",
+        "same",
+        "mentioned",
+        "explained",
+        "there"
+    }
+
+    STOP_WORDS = {
+        "what",
+        "which",
+        "where",
+        "when",
+        "why",
+        "how",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "can",
+        "could",
+        "should",
+        "would",
+        "tell",
+        "show",
+        "give",
+        "explain"
+    }
 
     @classmethod
     def is_followup(
@@ -26,36 +72,62 @@ class AnalyzeAgent:
 
         q = question.lower().strip()
 
-        FOLLOWUP_WORDS = {
-            "it",
-            "this",
-            "that",
-            "these",
-            "those",
-            "they",
-            "them",
-            "earlier",
-            "previous",
-            "previously",
-            "continue"
-        }
-
         words = set(q.split())
 
-        if FOLLOWUP_WORDS.intersection(words):
+        if cls.FOLLOWUP_WORDS.intersection(words):
             return True
 
-        if q.startswith(
-            (
-                "why",
-                "how",
-                "when",
-                "where"
+        if (
+            len(q.split()) <= 5
+            and q.startswith(
+                (
+                    "why",
+                    "how",
+                    "when",
+                    "where"
+                )
             )
-        ) and len(q.split()) <= 6:
+        ):
             return True
 
         return False
+
+    @classmethod
+    def extract_filename_filter(
+        cls,
+        original_question: str
+    ):
+
+        filename_match = re.search(
+            r'([A-Za-z0-9_\-\s]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md))',
+            original_question,
+            re.IGNORECASE
+        )
+
+        if filename_match:
+
+            return {
+                "filename": filename_match.group(1).strip()
+            }
+
+        return {}
+
+    @classmethod
+    def generate_keywords(
+        cls,
+        question: str
+    ):
+
+        return list(
+            dict.fromkeys(
+                [
+                    word
+                    for word in question.split()
+                    if len(word) > 2
+                    and word not in cls.STOP_WORDS
+                ]
+            )
+        )
 
     @classmethod
     def analyze(
@@ -64,70 +136,32 @@ class AnalyzeAgent:
         history=None
     ):
 
-        # -----------------------
-        # Normalize query
-        # -----------------------
+        original_question = question
 
-        question = normalize_query(
-            question
-        )
-
-        # -----------------------
-        # Detect followup
-        # -----------------------
+        question = normalize_query(question)
 
         use_history = cls.is_followup(
             question
         )
 
-        # -----------------------
-        # Deterministic filename filter
-        # -----------------------
-
-        regex_filters = {}
-
-        filename_match = re.search(
-            r'([A-Za-z0-9_\-\s]+\.(pdf|txt|doc|docx|csv|xlsx|ppt|pptx))',
-            question,
-            re.IGNORECASE
+        regex_filters = cls.extract_filename_filter(
+            original_question
         )
 
-        if filename_match:
-
-            regex_filters["filename"] = (
-                filename_match.group(1).strip()
-            )
-
-        # -----------------------
         # Fast path
-        # Skip LLM for normal queries
-        # -----------------------
-
         if not use_history:
 
             result = {
                 "intent": "rag",
-                "rewritten_question": question,
-                "keywords": [
-                    word
-                    for word in question.split()
-                    if len(word) > 2
-                ],
+                "rewritten_question": original_question,
+                "keywords": cls.generate_keywords(
+                    question
+                ),
                 "filters": regex_filters,
                 "needs_rag": True
             }
 
-            print(
-                f"[ANALYZE] "
-                f"history=False "
-                f"question='{question}'"
-            )
-
             return result
-
-        # -----------------------
-        # Build messages
-        # -----------------------
 
         messages = [
             {
@@ -136,46 +170,36 @@ class AnalyzeAgent:
             }
         ]
 
-        if history:
+        for msg in (history or [])[-5:]:
 
-            for msg in history[-5:]:
-
-                messages.append(
-                    {
-                        "role": msg.role,
-                        "content": msg.content
-                    }
-                )
+            messages.append(
+                {
+                    "role": msg.role,
+                    "content": msg.content
+                }
+            )
 
         messages.append(
             {
                 "role": "user",
-                "content": question
+                "content": original_question
             }
         )
 
-        # -----------------------
-        # Call LLM
-        # -----------------------
-
-        response = cls.client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0.1
-        )
-
-        content = (
-            response
-            .choices[0]
-            .message
-            .content
-        )
-
-        # -----------------------
-        # Parse JSON safely
-        # -----------------------
-
         try:
+
+            response = cls.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.0
+            )
+
+            content = (
+                response
+                .choices[0]
+                .message
+                .content
+            )
 
             cleaned = content.strip()
 
@@ -205,25 +229,19 @@ class AnalyzeAgent:
             result = json.loads(
                 cleaned
             )
+            if result.get("rewritten_question"):
+                result["rewritten_question"] = original_question
 
         except Exception as e:
-
-            print(
-                "JSON ERROR =",
-                repr(e)
-            )
-
             result = {
                 "intent": "rag",
-                "rewritten_question": question,
-                "keywords": [],
+                "rewritten_question": original_question,
+                "keywords": cls.generate_keywords(
+                    question
+                ),
                 "filters": {},
                 "needs_rag": True
             }
-
-        # -----------------------
-        # Merge filters
-        # -----------------------
 
         llm_filters = result.get(
             "filters",
@@ -234,18 +252,20 @@ class AnalyzeAgent:
             regex_filters
         )
 
-        result["filters"] = (
-            llm_filters
-        )
+        result["filters"] = llm_filters
 
         result["intent"] = "rag"
 
-        print(
-            f"[ANALYZE] "
-            f"history=True "
-            f"question='{question}' "
-            f"rewritten='{result.get('rewritten_question')}' "
-            f"filters={result.get('filters', {})}"
-        )
+        if not result.get(
+            "keywords"
+        ):
+            result["keywords"] = cls.generate_keywords(
+                result.get(
+                    "rewritten_question",
+                    question
+                )
+            )
 
         return result
+    
+    

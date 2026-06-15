@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class ChatRequest(BaseModel):
@@ -9,6 +9,10 @@ class ChatRequest(BaseModel):
 class SourceResponse(BaseModel):
     document_id: int
     filename: str
+
+    uploaded_by: Optional[int] = None
+    uploaded_by_name: Optional[str] = None
+
     rerank_score: float
     snippet: str
 

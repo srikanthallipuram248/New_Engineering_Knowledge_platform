@@ -20,19 +20,10 @@ class HybridSearchService:
     @staticmethod
     def search(
         query: str,
-        limit: int = 5,
-        filters: dict = None,
-        uploaded_by: int = None
+        limit: int = 10,
+        filters: dict = None
     ):
-        
-        # vector_results = SearchService.search(
-        #     query=query,
-        #     #limit=limit
-        #     limit=20,
-        #     filters=filters
-        # )
 
-        #New for QueryExpantationService
         expanded_queries = QueryExpansionService.expand(
             query
         )
@@ -44,11 +35,14 @@ class HybridSearchService:
             results = SearchService.search(
                 query=q,
                 limit=50,
-                filters=filters,
-                uploaded_by=uploaded_by
+                filters=filters
             )
 
-            all_results.extend(results)
+            all_results.extend(
+                results
+            )
+
+        # Remove duplicates
         unique_results = {}
 
         for item in all_results:
@@ -65,54 +59,37 @@ class HybridSearchService:
             unique_results.values()
         )
 
+        if not vector_results:
+            return []
+
         bm25_results = BM25Service.search(
             query=query,
             documents=vector_results,
-            limit=limit
+            limit=30
         )
 
-        # print(
-        #     f"Vector={len(vector_results)} "
-        #     f"BM25={len(bm25_results)}"
-        # )
-
-        #return vector_results
-        #return bm25_results
+        if not bm25_results:
+            return []
 
         reranked = RerankerService.rerank(
             query=query,
             results=bm25_results,
-            top_k=10
+            top_k=limit
         )
 
-        print("\n===== HYBRID SEARCH =====")
-        print("QUERY =", query)
-        print("VECTOR RESULTS =", len(vector_results))
-        print("BM25 RESULTS =", len(bm25_results))
-        print("RERANK RESULTS =", len(reranked))
-
-        for r in reranked[:5]:
-            print(
-                r["filename"],
-                r["document_id"]
-            )
-
-        print("\n===== QUERY EXPANSION =====")
-
-        for q in expanded_queries:
-            print(q)
-
-        print("===========================\n")
-
         if not reranked:
-            return bm25_results[:5]
+            return []
 
+        print(
+            f"HYBRID: "
+            f"query='{query}' "
+            f"vector={len(vector_results)} "
+            f"bm25={len(bm25_results)} "
+            f"reranked={len(reranked)}"
+        )
 
-
-        return reranked[:5]
-        
-
-
-
-
-
+        return reranked
+    
+    
+    
+    

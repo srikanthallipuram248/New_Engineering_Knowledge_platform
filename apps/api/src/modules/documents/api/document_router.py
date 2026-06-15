@@ -8,6 +8,7 @@ from src.core.database import get_db
 
 from src.shared.dependencies import get_current_user
 from src.modules.documents.models.document import Document
+from src.modules.users.models.user import User
 
 from src.modules.documents.tasks.process_document import (
     process_document
@@ -41,6 +42,7 @@ from src.modules.documents.services.embedding_service import (
 from src.modules.documents.utils.file_hash import (
     calculate_file_hash
 )
+
 
 
 
@@ -148,6 +150,7 @@ def upload_document(
             document_id=document.id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
+            uploaded_by_name=user.full_name,
             text=chunk.chunk_text,
             embedding=embedding
         )
@@ -166,7 +169,8 @@ def upload_document(
 @router.post("/index/{document_id}")
 def index_document(
     document_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
 ):
 
     document = db.query(
@@ -193,6 +197,12 @@ def index_document(
 
     vector_service = VectorStoreService()
 
+    uploader = db.query(
+        User
+    ).filter(
+        User.id == document.uploaded_by
+    ).first()
+
     indexed_count = 0
 
     for chunk in chunks:
@@ -206,6 +216,7 @@ def index_document(
             document_id=document_id,
             filename=document.file_name,
             uploaded_by=document.uploaded_by,
+            uploaded_by_name=uploader.full_name,
             text=chunk.chunk_text,
             embedding=embedding
         )
@@ -217,23 +228,6 @@ def index_document(
         "document_id": document_id,
         "chunks_indexed": indexed_count
     }
-
-
-
-
-#vector store
-
-# Keep endpoint for admin/debugging (whenever you want use it)
-# @router.post("/create-vector-db")
-# def create_vector_db():
-
-#     service = VectorStoreService()
-
-#     service.create_collection()
-
-#     return {
-#         "message": "Qdrant collection created"
-#     }
 
 
 #for search
@@ -250,8 +244,8 @@ def search_documents(
     vector_service = VectorStoreService()
 
     results = vector_service.search(
-        embedding,
-        uploaded_by=user.id
+        embedding
+        #uploaded_by=user.id
     )
 
     return {

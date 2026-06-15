@@ -1,11 +1,18 @@
 import re
 
 def normalize_query(query: str) -> str:
-    query = query.lower()
+
+    if not query:
+        return ""
+
+    query = query.strip().lower()
+
+    query = query.replace("™", "")
+    query = query.replace("®", "")
 
     query = re.sub(
-        r"[^\w\s]",
-        "",
+        r"[^a-z0-9\s._-]",
+        " ",
         query
     )
 
@@ -16,3 +23,7 @@ def normalize_query(query: str) -> str:
     )
 
     return query.strip()
+
+
+
+
