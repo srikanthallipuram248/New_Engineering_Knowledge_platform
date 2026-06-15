@@ -61,6 +61,18 @@ export function AppLayout() {
     }
   }, [mode])
 
+  const handleToolChange = (nextTool: ToolId) => {
+    setToolState(nextTool)
+    const target = mode === 'split' ? '/split' : nextTool === 'analyzer' ? '/analyzer' : '/library'
+    navigate(target)
+  }
+
+  const handleModeChange = (nextMode: ViewMode) => {
+    setModeState(nextMode)
+    const target = nextMode === 'split' ? '/split' : tool === 'analyzer' ? '/analyzer' : '/library'
+    navigate(target)
+  }
+
   // Keep URL in sync with the active tool/mode — but only for tool pages.
   // Routes like /chats are standalone pages and must not be redirected away.
   useEffect(() => {
@@ -97,7 +109,7 @@ export function AppLayout() {
             are already visible so the switcher would be redundant). */}
         {mode !== 'split' && (
           <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
-            <ToolSwitcher value={tool} onChange={setToolState} />
+            <ToolSwitcher value={tool} onChange={handleToolChange} />
           </div>
         )}
 
@@ -117,7 +129,7 @@ export function AppLayout() {
             <History className="h-3.5 w-3.5" />
             History
           </Button>
-          <ViewModeToggle value={mode} onChange={setModeState} className="hidden sm:inline-flex" />
+          <ViewModeToggle value={mode} onChange={handleModeChange} className="hidden sm:inline-flex" />
           <Button
             variant="ghost"
             size="sm"
