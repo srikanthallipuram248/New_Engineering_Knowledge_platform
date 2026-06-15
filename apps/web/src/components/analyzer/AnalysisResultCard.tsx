@@ -1,4 +1,3 @@
-import { motion } from 'motion/react'
 import {
   GitBranch,
   Sparkles,
@@ -15,7 +14,6 @@ import type { RepoAnalysisResult } from '@/services/api'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Section } from './Section'
-import { staggerContainer, fadeInUp } from '@/lib/motion-presets'
 
 interface AnalysisResultCardProps {
   result: RepoAnalysisResult
@@ -27,17 +25,9 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
     Array.isArray(v) ? v.length > 0 : Boolean(v && v !== 'Unknown')
 
   return (
-    <motion.article
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="glass overflow-hidden"
-    >
+    <article className="glass-flat overflow-hidden">
       {/* Header */}
-      <motion.header
-        variants={fadeInUp}
-        className="border-b border-foreground/[0.06] p-6 sm:p-8"
-      >
+      <header className="border-b border-foreground/[0.06] p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex items-center gap-2.5">
@@ -66,7 +56,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
             New analysis
           </Button>
         </div>
-      </motion.header>
+      </header>
 
       {/* Sections */}
       <div className="space-y-8 p-6 sm:p-8">
@@ -291,6 +281,6 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           </Section>
         )}
       </div>
-    </motion.article>
+    </article>
   )
 }
