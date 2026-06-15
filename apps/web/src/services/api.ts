@@ -83,6 +83,49 @@ export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
   return handleResponse<RepoAnalysisResult>(res)
 }
 
+// ── Chat ─────────────────────────────────────────────────────────────────
+
+export interface ChatSource {
+  document_id: number
+  filename: string
+  rerank_score: number
+  snippet: string
+}
+
+export interface ChatApiResponse {
+  answer: string
+  sources: ChatSource[]
+}
+
+/**
+ * History row as returned by GET /chat/history.
+ * Sources are NOT persisted (they're returned inline on POST /chat),
+ * so history rows only carry role + content.
+ */
+export interface ChatHistoryMessage {
+  id: number
+  user_id: number
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+export async function askChat(question: string): Promise<ChatApiResponse> {
+  const res = await fetch(`${BASE}/chat`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ question }),
+  })
+  return handleResponse<ChatApiResponse>(res)
+}
+
+export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
+  const res = await fetch(`${BASE}/chat/history`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<ChatHistoryMessage[]>(res)
+}
+
 // ── Documents / Library ─────────────────────────────────────────────────
 
 export interface LibraryDocument {
