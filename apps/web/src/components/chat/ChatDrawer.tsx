@@ -344,7 +344,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ? 'rounded-br-md bg-primary text-primary-foreground shadow-md shadow-primary/20'
             : isFailed
               ? 'rounded-bl-md border border-destructive/30 bg-destructive/10 text-destructive'
-              : 'glass rounded-bl-md text-foreground',
+              : 'glass-flat rounded-bl-md text-foreground',
         )}
       >
         {message.pending ? (
@@ -446,7 +446,7 @@ interface InputBarProps {
 function InputBar({ draft, setDraft, onSubmit, sending }: InputBarProps) {
   return (
     <form onSubmit={onSubmit} className="border-t border-foreground/[0.06] p-3">
-      <div className="glass flex items-end gap-2 rounded-2xl p-2">
+      <div className="glass-flat flex items-end gap-2 rounded-2xl p-2">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

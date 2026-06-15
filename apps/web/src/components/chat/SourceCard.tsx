@@ -29,7 +29,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
         : 'text-muted-foreground bg-foreground/5 ring-foreground/10'
 
   return (
-    <div className="glass overflow-hidden rounded-xl text-xs">
+    <div className="glass-flat overflow-hidden rounded-xl text-xs">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

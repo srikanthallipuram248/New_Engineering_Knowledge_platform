@@ -107,10 +107,9 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Core Features">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {result.core_features.map((f, i) => (
-                <motion.div
+                <div
                   key={`${f.name}-${i}`}
-                  variants={fadeInUp}
-                  className="glass rounded-xl p-4"
+                  className="glass-flat rounded-xl p-4"
                 >
                   <div className="flex items-center gap-2">
                     <Boxes className="h-3.5 w-3.5 text-primary" />
@@ -129,7 +128,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                       {f.evidence}
                     </p>
                   )}
-                </motion.div>
+                </div>
               ))}
             </div>
           </Section>
@@ -137,7 +136,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
 
         {has(result.key_modules) && (
           <Section title="Key Modules">
-            <div className="glass overflow-hidden rounded-xl">
+            <div className="glass-flat overflow-hidden rounded-xl">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-foreground/[0.06] bg-foreground/[0.02] text-left">
@@ -173,9 +172,8 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Data Flow">
             <ol className="space-y-2">
               {result.data_flow.map((step, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
                   className="flex gap-3"
                 >
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono text-[11px] font-semibold text-primary ring-1 ring-primary/20">
@@ -184,7 +182,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                   <span className="flex-1 text-sm leading-relaxed text-foreground/85">
                     {step}
                   </span>
-                </motion.li>
+                </li>
               ))}
             </ol>
           </Section>
@@ -194,10 +192,9 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Commands">
             <ul className="space-y-2">
               {result.commands.map((c, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
-                  className="glass flex flex-col gap-1 rounded-xl p-3 sm:flex-row sm:items-center sm:gap-3"
+                  className="glass-flat flex flex-col gap-1 rounded-xl p-3 sm:flex-row sm:items-center sm:gap-3"
                 >
                   <code className="inline-flex items-center gap-2 rounded-lg bg-foreground/[0.05] px-2.5 py-1.5 font-mono text-[12px] font-semibold text-primary ring-1 ring-foreground/5">
                     <Terminal className="h-3 w-3" />
@@ -206,7 +203,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                   <span className="text-[13px] leading-relaxed text-foreground/80">
                     {c.purpose}
                   </span>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </Section>
@@ -216,9 +213,8 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Setup Steps">
             <ol className="space-y-2">
               {result.setup_steps.map((step, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
                   className="flex gap-3"
                 >
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent/15 ring-1 ring-accent/20">
@@ -227,7 +223,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                   <span className="flex-1 text-sm leading-relaxed text-foreground/85">
                     {step}
                   </span>
-                </motion.li>
+                </li>
               ))}
             </ol>
           </Section>
@@ -237,16 +233,15 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Notable Design Decisions">
             <ul className="space-y-2">
               {result.notable_design_decisions.map((d, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
                   className="flex gap-3"
                 >
                   <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
                   <span className="flex-1 text-sm leading-relaxed text-foreground/85">
                     {d}
                   </span>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </Section>
@@ -264,16 +259,15 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Limitations">
             <ul className="space-y-2">
               {result.limitations.map((l, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
                   className="flex gap-3"
                 >
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
                   <span className="flex-1 text-sm leading-relaxed text-foreground/85">
                     {l}
                   </span>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </Section>
@@ -283,16 +277,15 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
           <Section title="Entry Points">
             <ul className="space-y-1.5">
               {result.entry_points.map((ep, i) => (
-                <motion.li
+                <li
                   key={i}
-                  variants={fadeInUp}
                   className="flex items-center gap-2.5"
                 >
                   <DoorOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <code className="font-mono text-[13px] font-semibold text-primary">
                     {ep}
                   </code>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </Section>
