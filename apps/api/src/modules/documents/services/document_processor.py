@@ -38,6 +38,24 @@ class DocumentProcessor:
         elif suffix == ".pptx":
             return DocumentProcessor._extract_pptx(path)
 
+        # Code files
+        elif suffix in [
+            ".py",
+            ".java",
+            ".js",
+            ".ts",
+            ".go",
+            ".cs",
+            ".cpp",
+            ".c",
+            ".json",
+            ".xml",
+            ".yaml",
+            ".yml",
+            ".md"
+        ]:
+            return DocumentProcessor._extract_txt(path)
+
         else:
             raise ValueError(
                 f"Unsupported file type: {suffix}"
