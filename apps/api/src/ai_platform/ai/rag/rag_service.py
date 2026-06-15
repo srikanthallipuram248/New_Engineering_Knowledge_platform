@@ -104,8 +104,8 @@ CONTENT:
     @staticmethod
     def retrieve(
         question: str,
-        history: list = None
-        #uploaded_by: int = None
+        history: list = None,
+        document_ids: list = None
     ):
 
         analysis = AnalyzeAgent.analyze(
@@ -117,14 +117,15 @@ CONTENT:
             "rewritten_question"
         ]
 
+        # Merge document_ids into filters if provided
+        filters = analysis.get("filters", {})
+        if document_ids:
+            filters["document_ids"] = document_ids
+
         results = HybridSearchService.search(
             query=rewritten_question,
-            filters=analysis.get(
-                "filters",
-                {}
-            ),
+            filters=filters,
             limit=RAGService.SEARCH_LIMIT
-            #uploaded_by=uploaded_by
         )
 
         if not results:

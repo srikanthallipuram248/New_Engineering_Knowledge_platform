@@ -36,6 +36,9 @@ class ChatState(TypedDict):
 
     uploaded_by: int
 
+    # Optional: scope RAG search to specific document IDs
+    document_ids: Optional[List[int]]
+
 
 
 

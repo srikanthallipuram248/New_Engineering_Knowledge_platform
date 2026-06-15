@@ -14,7 +14,8 @@ class ChatService:
     def ask(
         question,
         db,
-        user
+        user,
+        document_ids=None
     ):
         history = ChatHistoryService.get_recent(
             db=db,
@@ -29,7 +30,8 @@ class ChatService:
             {
                 "question": question,
                 "history": history,
-                "uploaded_by": user.id
+                "uploaded_by": user.id,
+                "document_ids": document_ids or []
             }
         )
 
