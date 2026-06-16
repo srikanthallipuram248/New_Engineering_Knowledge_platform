@@ -26,6 +26,14 @@ class CommandInfo(BaseModel):
         from_attributes = True
 
 
+class FileDescription(BaseModel):
+    path: str
+    description: str
+
+    class Config:
+        from_attributes = True
+
+
 class AnalyzeRequest(BaseModel):
     git_url: str
 
@@ -33,18 +41,20 @@ class AnalyzeRequest(BaseModel):
 class RepoAnalysisResult(BaseModel):
     repo_name: str
     summary: str
-    detailed_overview: str
     tech_stack: list[str]
     architecture: str
+    mermaid_arch_diagram: str
+    mermaid_flow_diagram: str
+    folder_tree: str = ""           # injected from scan state, not LLM
     key_modules: list[KeyModule]
+    file_descriptions: list[FileDescription]
     core_features: list[Feature]
     data_flow: list[str]
     setup_steps: list[str]
     commands: list[CommandInfo]
-    testing: str
+    entry_points: list[str]
     notable_design_decisions: list[str]
     limitations: list[str]
-    entry_points: list[str]
     readme_found: bool
 
     class Config:

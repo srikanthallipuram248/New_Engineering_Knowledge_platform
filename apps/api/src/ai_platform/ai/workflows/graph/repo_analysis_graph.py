@@ -89,4 +89,7 @@ def run_repo_analysis_graph(git_url: str) -> dict:
             final_state.get("error") or "Analysis produced no result"
         )
 
-    return final_state["analysis_result"]
+    result = final_state["analysis_result"]
+    # Inject the scanned folder tree directly — LLM doesn't need to regenerate it
+    result["folder_tree"] = final_state.get("folder_tree", "")
+    return result
