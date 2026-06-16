@@ -145,8 +145,8 @@ CONTENT:
     @staticmethod
     def retrieve(
         question: str,
-        history: list = None
-        #uploaded_by: int = None
+        history: list = None,
+        document_ids: list = None
     ):
 
         analysis = AnalyzeAgent.analyze(
@@ -158,15 +158,13 @@ CONTENT:
             "rewritten_question"
         ]
 
-        # results = HybridSearchService.search(
-        #     query=rewritten_question,
-        #     filters=analysis.get(
-        #         "filters",
-        #         {}
-        #     ),
-        #     limit=RAGService.SEARCH_LIMIT
-        #     #uploaded_by=uploaded_by
-        # )
+        filters = analysis.get(
+            "filters",
+            {}
+        )
+        if document_ids:
+            filters["document_ids"] = document_ids
+
         search_query = " ".join(
             analysis.get(
                 "keywords",
@@ -179,10 +177,7 @@ CONTENT:
 
         results = HybridSearchService.search(
             query=search_query,
-            filters=analysis.get(
-                "filters",
-                {}
-            ),
+            filters=filters,
             limit=RAGService.SEARCH_LIMIT
         )
 

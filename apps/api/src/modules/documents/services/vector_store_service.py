@@ -3,10 +3,10 @@ from qdrant_client.models import (
     VectorParams,
     Distance,
     PointStruct,
-    #NEW
     Filter,
     FieldCondition,
-    MatchValue
+    MatchValue,
+    MatchAny
 )
 
 
@@ -88,6 +88,17 @@ class VectorStoreService:
                     key="filename",
                     match=MatchValue(
                         value=filters["filename"]
+                    )
+                )
+            )
+
+        # Scope search to specific document IDs if provided
+        if filters and filters.get("document_ids"):
+            must_conditions.append(
+                FieldCondition(
+                    key="document_id",
+                    match=MatchAny(
+                        any=filters["document_ids"]
                     )
                 )
             )

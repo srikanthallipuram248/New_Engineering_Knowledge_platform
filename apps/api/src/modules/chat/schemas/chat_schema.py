@@ -4,6 +4,7 @@ from typing import List, Optional
 
 class ChatRequest(BaseModel):
     question: str
+    document_ids: Optional[List[int]] = None
 
 
 class SourceResponse(BaseModel):

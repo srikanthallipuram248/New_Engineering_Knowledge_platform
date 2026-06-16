@@ -1,5 +1,3 @@
-import { motion } from 'motion/react'
-import { fadeInUp } from '@/lib/motion-presets'
 import { cn } from '@/lib/utils'
 
 interface SectionProps {
@@ -9,12 +7,14 @@ interface SectionProps {
   children: React.ReactNode
 }
 
+/**
+ * Plain semantic section with a header. No motion — keeps the result
+ * card's content stable across re-renders and avoids the
+ * "re-cascade on scroll" perception in split view.
+ */
 export function Section({ title, description, className, children }: SectionProps) {
   return (
-    <motion.section
-      variants={fadeInUp}
-      className={cn('space-y-3', className)}
-    >
+    <section className={cn('space-y-3', className)}>
       <div className="space-y-1">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           {title}
@@ -24,6 +24,6 @@ export function Section({ title, description, className, children }: SectionProp
         )}
       </div>
       <div>{children}</div>
-    </motion.section>
+    </section>
   )
 }

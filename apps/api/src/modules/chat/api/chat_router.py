@@ -69,6 +69,7 @@ def chat(
     #New
     response = ChatService.ask(
         question=request.question,
+        document_ids=request.document_ids,
         db=db,
         user=user
     )
