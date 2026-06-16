@@ -68,25 +68,28 @@ export function logout(): void {
 
 // ── Analyzer ──────────────────────────────────────────────────────────────
 
-export interface KeyModule { name: string; role: string }
-export interface Feature { name: string; description: string; evidence: string }
-export interface CommandInfo { command: string; purpose: string }
+export interface KeyModule    { name: string; role: string }
+export interface Feature      { name: string; description: string; evidence: string }
+export interface CommandInfo  { command: string; purpose: string }
+export interface FileDescription { path: string; description: string }
 
 export interface RepoAnalysisResult {
   repo_name: string
   summary: string
-  detailed_overview: string
   tech_stack: string[]
   architecture: string
+  mermaid_arch_diagram: string
+  mermaid_flow_diagram: string
+  folder_tree: string
   key_modules: KeyModule[]
+  file_descriptions: FileDescription[]
   core_features: Feature[]
   data_flow: string[]
   setup_steps: string[]
   commands: CommandInfo[]
-  testing: string
+  entry_points: string[]
   notable_design_decisions: string[]
   limitations: string[]
-  entry_points: string[]
   readme_found: boolean
 }
 
