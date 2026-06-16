@@ -6,6 +6,10 @@ from src.ai_platform.ai.llms.groq_service import GroqService
 
 from src.ai_platform.ai.agents.chat_agent import ChatAgent
 
+from src.ai_platform.ai.agents.direct_chat_agent import (
+    DirectChatAgent
+)
+
 
 
 #-------------------
@@ -17,12 +21,6 @@ def analyze_node(state):
         state["question"],
         state.get("history")
     )
-
-    # return {
-    #     "rewritten_question": analysis["rewritten_question"],
-    #     "keywords": analysis.get("keywords", []),
-    #     "filters": analysis.get("filters", {})
-    # }
 
     #Update for Intent router graph
     return {
@@ -49,20 +47,11 @@ def analyze_node(state):
 # RAG Node
 #-------------------
 def rag_node(state):
-    # context = RAGService.ask(
-    #     question=state["rewritten_question"],
-    #     history=state.get("history")
-    # )
-
-    # return {
-    #     "context": context
-    # }
-
     #new
     data = RAGService.retrieve(
         question=state["rewritten_question"],
-        history=state.get("history")
-        #uploaded_by=state.get("uploaded_by")
+        history=state.get("history"),
+        document_ids=state.get("document_ids") or []
     )
     #New
     return {
@@ -76,16 +65,6 @@ def rag_node(state):
 # Chat Node
 #------------------
 def chat_node(state):
-    # answer = GroqService.generate(
-    #     question=state["rewritten_question"],
-    #     context=state["context"],
-    #     history=state.get("history")
-    # )
-
-    # return {
-    #     "answer": answer
-    # }
-
     #New
     answer = ChatAgent.answer(
         question=state["rewritten_question"],
@@ -103,13 +82,8 @@ def chat_node(state):
 # -----------------
 
 def direct_chat_node(state):
-
-    answer = ChatAgent.answer(
-        question=state["question"],
-        context="",
-        history=state.get(
-            "history"
-        )
+    answer = DirectChatAgent.answer(
+        state["question"]
     )
 
     return {

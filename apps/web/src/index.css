@@ -126,6 +126,17 @@
     border-color: hsl(var(--foreground) / 0.06);
   }
 
+  /**
+   * Like .glass but without the backdrop-filter pass. Use for nested
+   * surfaces (cards inside cards, list items, source citations) so we
+   * don't stack 4-6 simultaneous blur layers on the GPU.
+   * Visually nearly identical — slightly more solid look, no perf cost.
+   */
+  .glass-flat {
+    background-color: hsl(var(--card) / 0.7);
+    border: 1px solid hsl(var(--foreground) / 0.08);
+  }
+
   .text-gradient {
     background: linear-gradient(
       135deg,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ScanSearch, AlertCircle } from 'lucide-react'
 import { analyzeRepo } from '@/services/api'
@@ -14,25 +14,71 @@ type State =
   | { kind: 'error'; message: string; lastUrl: string }
   | { kind: 'result'; data: RepoAnalysisResult; url: string }
 
+const STORAGE_KEY = 'ekp.analyzer.state'
+
+// Initial load from storage
+let globalState: State = (() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved) as State
+      // If it was left in loading, reset to idle on hard reload since the network request is gone
+      if (parsed.kind === 'loading') {
+        return { kind: 'idle' }
+      }
+      return parsed
+    }
+  } catch {
+    // ignore
+  }
+  return { kind: 'idle' }
+})()
+
+const listeners = new Set<(state: State) => void>()
+
+function updateGlobalState(nextState: State) {
+  globalState = nextState
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState))
+  } catch {
+    // ignore
+  }
+  listeners.forEach((listener) => listener(globalState))
+}
+
 export default function AnalyzerPage() {
-  const [state, setState] = useState<State>({ kind: 'idle' })
+  const [state, setState] = useState<State>(globalState)
+
+  useEffect(() => {
+    setState(globalState)
+    const listener = (next: State) => setState(next)
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }, [])
 
   async function handleAnalyze(url: string) {
-    setState({ kind: 'loading', url })
+    updateGlobalState({ kind: 'loading', url })
     try {
       const data = await analyzeRepo(url)
-      setState({ kind: 'result', data, url })
+      // Only update if we are still the loading request for this URL
+      if (globalState.kind === 'loading' && globalState.url === url) {
+        updateGlobalState({ kind: 'result', data, url })
+      }
     } catch (err: unknown) {
-      setState({
-        kind: 'error',
-        message: err instanceof Error ? err.message : 'Analysis failed',
-        lastUrl: url,
-      })
+      if (globalState.kind === 'loading' && globalState.url === url) {
+        updateGlobalState({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Analysis failed',
+          lastUrl: url,
+        })
+      }
     }
   }
 
   function handleReset() {
-    setState({ kind: 'idle' })
+    updateGlobalState({ kind: 'idle' })
   }
 
   const currentUrl =

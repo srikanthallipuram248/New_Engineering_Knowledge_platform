@@ -31,7 +31,12 @@ export default function LoginPage() {
   const { setToken } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const search = location.search
+  const params = new URLSearchParams(search)
+  const expired = params.get('expired') === '1'
+  const nextPath = params.get('next')
   const from =
+    nextPath ??
     (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ??
     '/analyzer'
 
@@ -109,6 +114,23 @@ export default function LoginPage() {
           </div>
 
           <AnimatePresence mode="wait">
+            {expired && !error && (
+              <motion.div
+                key="expired"
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -8, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-sm text-amber-300">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="leading-relaxed">
+                    Your session expired. Please sign in again.
+                  </span>
+                </div>
+              </motion.div>
+            )}
             {error && (
               <motion.div
                 key="error"

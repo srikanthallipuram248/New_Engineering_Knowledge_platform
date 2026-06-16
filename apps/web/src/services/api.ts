@@ -14,6 +14,22 @@ function authHeaders(): HeadersInit {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    // 401 = token expired/invalid. Clear it and bounce to /login so
+    // the user gets a clear "session expired" flow instead of being
+    // stuck on a half-broken page.
+    if (res.status === 401) {
+      try {
+        localStorage.removeItem('token')
+      } catch {
+        /* ignore */
+      }
+      // Only redirect if we're not already on the login page
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.replace(`/login?expired=1&next=${next}`)
+      }
+      throw new Error('Your session has expired — please sign in again.')
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'Request failed')
   }
@@ -77,20 +93,17 @@ export interface RepoAnalysisResult {
   readme_found: boolean
 }
 
-export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
-  const res = await fetch(`${BASE}/analyzer/analyze`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ git_url: gitUrl }),
-  })
-  return handleResponse<RepoAnalysisResult>(res)
-}
+// ── Chat (Agent 2) ──────────────────────────────────────────────────────
 
-// ── Chat ─────────────────────────────────────────────────────────────────
-
+/**
+ * A source citation returned with each chat answer. `uploaded_by_name`
+ * may be null on older backend records — handle both.
+ */
 export interface ChatSource {
   document_id: number
   filename: string
+  uploaded_by?: number | null
+  uploaded_by_name?: string | null
   rerank_score: number
   snippet: string
 }
@@ -101,9 +114,9 @@ export interface ChatApiResponse {
 }
 
 /**
- * History row as returned by GET /chat/history.
- * Sources are NOT persisted (they're returned inline on POST /chat),
- * so history rows only carry role + content.
+ * History row as returned by GET /chat/history. Sources are NOT
+ * persisted (they're returned inline on POST /chat) — history rows
+ * only carry role + content.
  */
 export interface ChatHistoryMessage {
   id: number
@@ -113,11 +126,14 @@ export interface ChatHistoryMessage {
   created_at: string
 }
 
-export async function askChat(question: string): Promise<ChatApiResponse> {
+export async function askChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
+    }),
   })
   return handleResponse<ChatApiResponse>(res)
 }
@@ -127,4 +143,125 @@ export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
     headers: authHeaders(),
   })
   return handleResponse<ChatHistoryMessage[]>(res)
+}
+
+export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
+  const res = await fetch(`${BASE}/analyzer/analyze`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ git_url: gitUrl }),
+  })
+  return handleResponse<RepoAnalysisResult>(res)
+}
+
+// ── Documents / Library ─────────────────────────────────────────────────
+
+export interface LibraryDocument {
+  id: number
+  title: string
+  file_name: string
+  file_type: string
+  created_at: string
+}
+
+export interface UploadResponse {
+  message: string
+  document_id?: number
+  chunks_saved?: number
+  chunks_indexed?: number
+}
+
+export interface UploadProgress {
+  loaded: number
+  total: number
+  /** 0..1 */
+  ratio: number
+}
+
+export async function listDocuments(): Promise<LibraryDocument[]> {
+  const res = await fetch(`${BASE}/documents`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<LibraryDocument[]>(res)
+}
+
+export async function deleteDocument(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/documents/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  await handleResponse<{ message?: string }>(res)
+}
+
+/**
+ * Upload a single file with real progress events via XHR.
+ * fetch() doesn't expose upload progress, so we fall back to XHR for this
+ * one endpoint. Returns a promise that resolves with the backend response
+ * and rejects with an Error.
+ */
+export function uploadDocument(
+  file: File,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<UploadResponse> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const form = new FormData()
+    form.append('file', file)
+
+    xhr.open('POST', `${BASE}/documents/upload`, true)
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress({
+          loaded: e.loaded,
+          total: e.total,
+          ratio: e.loaded / e.total,
+        })
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as UploadResponse)
+        } catch (err) {
+          reject(new Error('Invalid server response'))
+        }
+      } else if (xhr.status === 401) {
+        // Token expired/invalid — same bounce-to-login treatment as
+        // handleResponse so the user is never stuck looking at a
+        // half-broken page.
+        try {
+          localStorage.removeItem('token')
+        } catch {
+          /* ignore */
+        }
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.startsWith('/login')
+        ) {
+          const next = encodeURIComponent(window.location.pathname + window.location.search)
+          window.location.replace(`/login?expired=1&next=${next}`)
+        }
+        reject(new Error('Your session has expired — please sign in again.'))
+      } else {
+        // Try to extract the backend's `detail` field
+        let detail = xhr.statusText
+        try {
+          const body = JSON.parse(xhr.responseText)
+          detail = body.detail ?? body.message ?? detail
+        } catch {
+          /* ignore */
+        }
+        reject(new Error(detail || `Upload failed (${xhr.status})`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Network error during upload'))
+    xhr.onabort = () => reject(new Error('Upload aborted'))
+
+    xhr.send(form)
+  })
 }

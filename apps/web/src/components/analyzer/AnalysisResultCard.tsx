@@ -73,7 +73,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
       variants={staggerContainer}
       initial="hidden"
       animate="show"
-      className="glass overflow-hidden"
+      className="glass-flat overflow-hidden"
     >
       {/* ── Header ───────────────────────────────────────────────── */}
       <motion.header
@@ -144,7 +144,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {has(result.mermaid_arch_diagram) && (
             <Section title="Architecture Diagram">
-              <div className="glass rounded-xl p-4">
+              <div className="glass-flat rounded-xl p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <Network className="h-3.5 w-3.5 text-primary" />
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -158,7 +158,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
 
           {has(result.folder_tree) && (
             <Section title="Folder Structure">
-              <div className="glass rounded-xl p-4">
+              <div className="glass-flat rounded-xl p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <Folders className="h-3.5 w-3.5 text-accent" />
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -179,7 +179,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                 <motion.div
                   key={`${m.name}-${i}`}
                   variants={fadeInUp}
-                  className="glass rounded-xl p-4 space-y-2"
+                  className="glass-flat rounded-xl p-4 space-y-2"
                 >
                   <div className="flex items-center gap-2">
                     <Boxes className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -199,7 +199,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
         {/* ── Data Flow Diagram ────────────────────────────────────── */}
         {has(result.mermaid_flow_diagram) && (
           <Section title="Data Flow Diagram">
-            <div className="glass rounded-xl p-4">
+            <div className="glass-flat rounded-xl p-4">
               <div className="mb-2 flex items-center gap-2">
                 <ArrowRightLeft className="h-3.5 w-3.5 text-accent" />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -214,7 +214,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
         {/* ── File Descriptions ────────────────────────────────────── */}
         {has(result.file_descriptions) && (
           <Section title="Key Files" description="Important files and what they do">
-            <div className="glass overflow-hidden rounded-xl">
+            <div className="glass-flat overflow-hidden rounded-xl">
               {result.file_descriptions.map((f, i) => (
                 <motion.div
                   key={`${f.path}-${i}`}
@@ -244,7 +244,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                 <motion.div
                   key={`${f.name}-${i}`}
                   variants={fadeInUp}
-                  className="glass rounded-xl p-4 space-y-1.5"
+                  className="glass-flat rounded-xl p-4 space-y-1.5"
                 >
                   <p className="text-sm font-semibold text-foreground">{f.name}</p>
                   <p className="text-[12px] leading-relaxed text-foreground/75">
@@ -289,7 +289,7 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
                   <motion.li
                     key={i}
                     variants={fadeInUp}
-                    className="glass flex flex-col gap-1 rounded-xl p-3"
+                    className="glass-flat flex flex-col gap-1 rounded-xl p-3"
                   >
                     <code className="inline-flex items-center gap-2 font-mono text-[12px] font-semibold text-primary">
                       <Terminal className="h-3 w-3 shrink-0" />

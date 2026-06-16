@@ -47,11 +47,6 @@ class RerankerService:
             if r["rerank_score"] > cls.MIN_RERANK_SCORE
         ]
 
-        print(
-            f"RERANK: input={len(results)} "
-            f"filtered={len(filtered)}"
-        )
-
         return filtered[:top_k]
     
     

@@ -21,11 +21,6 @@ class GroqService:
         history=None
     ):
 
-        print(
-            f"GROQ: question='{question[:80]}' "
-            f"context_length={len(context)}"
-        )
-
         if not context.strip():
 
             return (
@@ -67,10 +62,6 @@ QUESTION:
             .message
             .content
             .strip()
-        )
-
-        print(
-            f"GROQ: answer_length={len(answer)}"
         )
 
         return answer
