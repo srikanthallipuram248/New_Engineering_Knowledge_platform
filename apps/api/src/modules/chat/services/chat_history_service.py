@@ -7,8 +7,6 @@ from src.modules.chat.models.chat_message import (
 )
 
 
-
-
 class ChatHistoryService:
 
     @staticmethod
@@ -18,6 +16,7 @@ class ChatHistoryService:
         role,
         content
     ):
+    
         
         message = ChatMessage(
             user_id = user_id,

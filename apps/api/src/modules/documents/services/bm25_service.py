@@ -30,14 +30,6 @@ class BM25Service:
             reverse=True
         )
 
-
-        for doc, score in ranked[:10]:
-            print(
-                f"{doc.get('filename')} | "
-                f"doc={doc.get('document_id')} | "
-                f"score={float(score)}"
-            )
-
         results = []
 
         for doc, score in ranked[:limit]:
@@ -56,16 +48,8 @@ class BM25Service:
                     )
                 }
             )
-            
-        # OR
-        # for doc, score in ranked[:limit]:
-
-        #     item = doc.copy()
-
-        #     item["score"] = float(score)
-
-        #     results.append(item)
-        
-        
 
         return results
+    
+
+    

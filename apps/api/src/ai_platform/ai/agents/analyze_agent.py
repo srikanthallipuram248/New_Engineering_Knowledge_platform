@@ -59,10 +59,199 @@ class AnalyzeAgent:
         "should",
         "would",
         "tell",
-        "show",
         "give",
-        "explain"
+        "explain",
+
+        "about",
+        "section",
+        "document",
+        "uploaded",
+        "details",
+        "detailed",
+        "information",
+        "describe",
+        "from"
     }
+
+
+    # this method adding for intent router
+    # @classmethod
+    # def classify_intent(
+    #     cls,
+    #     question: str
+    # ) -> str:
+
+    #     q = question.lower().strip()
+
+    #     # Greeting
+    #     if q in {
+    #         "hi",
+    #         "hello",
+    #         "hey",
+    #         "good morning",
+    #         "good afternoon",
+    #         "good evening"
+    #     }:
+    #         return "greeting"
+
+    #     # Help
+    #     if q in {
+    #         "help",
+    #         "what can you do",
+    #         "show capabilities",
+    #         "show commands"
+    #     }:
+    #         return "help"
+
+    #     # Summarize
+    #     if any(
+    #         word in q
+    #         for word in [
+    #             "summarize",
+    #             "summary"
+    #         ]
+    #     ):
+    #         return "summarize"
+
+    #     # Compare
+    #     if any(
+    #         word in q
+    #         for word in [
+    #             "compare",
+    #             "difference",
+    #             "differences",
+    #             "vs"
+    #         ]
+    #     ):
+    #         return "compare"
+
+    #     # Code
+    #     code_keywords = [
+    #         "code",
+    #         "implementation",
+    #         "source code",
+    #         "class",
+    #         "function",
+    #         "method",
+    #         "service",
+    #         "repository",
+    #         "api",
+    #         "controller",
+    #         "endpoint",
+    #         "workflow",
+    #         "architecture",
+    #         "login",
+    #         "authentication",
+    #         "authorization",
+    #         "jwt",
+    #         "token",
+    #         "database",
+    #         "query",
+    #         "sql",
+    #         "schema"
+    #     ]
+
+    #     if any(
+    #         keyword in q
+    #         for keyword in code_keywords
+    #     ):
+    #         return "code"
+
+    #     # Document / File Questions
+    #     rag_keywords = [
+    #         ".pdf",
+    #         ".doc",
+    #         ".docx",
+    #         ".txt",
+    #         ".csv",
+    #         ".xlsx",
+    #         ".xls",
+    #         ".ppt",
+    #         ".pptx",
+    #         ".json",
+    #         ".xml",
+    #         ".md",
+    #         ".py",
+    #         ".js",
+    #         ".ts",
+    #         ".java",
+    #         ".go",
+    #         ".cs",
+    #         ".cpp",
+    #         ".html",
+    #         ".css",
+    #         ".sql",
+    #         ".yaml",
+    #         ".yml",
+    #         "document",
+    #         "file",
+    #         "report",
+    #         "dataset",
+    #         "uploaded"
+    #     ]
+
+    #     if any(
+    #         keyword in q
+    #         for keyword in rag_keywords
+    #     ):
+    #         return "rag"
+
+    #     # Default = General Chat
+    #     return "chat"
+
+    @classmethod
+    def classify_intent(
+        cls,
+        question: str
+    ) -> str:
+
+        q = question.lower().strip()
+
+        # Greeting
+        if q in {
+            "hi",
+            "hello",
+            "hey",
+            "good morning",
+            "good afternoon",
+            "good evening"
+        }:
+            return "greeting"
+
+        # Help
+        if q in {
+            "help",
+            "what can you do",
+            "show capabilities",
+            "show commands"
+        }:
+            return "help"
+
+        # Summarize
+        if any(
+            word in q
+            for word in [
+                "summarize",
+                "summary"
+            ]
+        ):
+            return "summarize"
+
+        # Compare
+        if any(
+            word in q
+            for word in [
+                "compare",
+                "difference",
+                "differences",
+                "vs"
+            ]
+        ):
+            return "compare"
+
+        # Everything else
+        return "rag"
+
 
     @classmethod
     def is_followup(
@@ -99,7 +288,7 @@ class AnalyzeAgent:
     ):
 
         filename_match = re.search(
-            r'([A-Za-z0-9_\-\s]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md))',
+            r'([A-Za-z0-9_\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
             original_question,
             re.IGNORECASE
         )
@@ -107,7 +296,7 @@ class AnalyzeAgent:
         if filename_match:
 
             return {
-                "filename": filename_match.group(1).strip()
+                "filename": filename_match.group(1)
             }
 
         return {}
@@ -117,6 +306,12 @@ class AnalyzeAgent:
         cls,
         question: str
     ):
+
+        question = re.sub(
+            r"[^\w\s]",
+            " ",
+            question.lower()
+        )
 
         return list(
             dict.fromkeys(
@@ -138,6 +333,10 @@ class AnalyzeAgent:
 
         original_question = question
 
+        intent = cls.classify_intent(
+            original_question
+        )
+
         question = normalize_query(question)
 
         use_history = cls.is_followup(
@@ -151,17 +350,20 @@ class AnalyzeAgent:
         # Fast path
         if not use_history:
 
-            result = {
-                "intent": "rag",
+            return {
+                "intent": intent,
                 "rewritten_question": original_question,
                 "keywords": cls.generate_keywords(
                     question
                 ),
                 "filters": regex_filters,
-                "needs_rag": True
+                "needs_rag": intent in [
+                    "rag",
+                    "code",
+                    "summarize",
+                    "compare"
+                ]
             }
-
-            return result
 
         messages = [
             {
@@ -229,12 +431,43 @@ class AnalyzeAgent:
             result = json.loads(
                 cleaned
             )
-            if result.get("rewritten_question"):
-                result["rewritten_question"] = original_question
 
-        except Exception as e:
+            result.setdefault(
+                "intent",
+                intent
+            )
+
+            result.setdefault(
+                "rewritten_question",
+                original_question
+            )
+
+            result.setdefault(
+                "keywords",
+                []
+            )
+
+            result.setdefault(
+                "filters",
+                {}
+            )
+
+            result.setdefault(
+                "needs_rag",
+                True
+            )
+
+
+            if not result.get(
+                "rewritten_question"
+            ):
+                result["rewritten_question"] = (
+                    original_question
+                )
+
+        except Exception:
             result = {
-                "intent": "rag",
+                "intent": intent,
                 "rewritten_question": original_question,
                 "keywords": cls.generate_keywords(
                     question
@@ -254,8 +487,6 @@ class AnalyzeAgent:
 
         result["filters"] = llm_filters
 
-        result["intent"] = "rag"
-
         if not result.get(
             "keywords"
         ):
@@ -267,5 +498,4 @@ class AnalyzeAgent:
             )
 
         return result
-    
     
