@@ -25,6 +25,11 @@ from src.modules.chat.services.chat_history_service import (
     ChatHistoryService
 )
 
+# New Generate question and answer schema
+from src.modules.chat.schemas.re_generate_schema import (
+    RegenerateRequest
+)
+
 
 
 
@@ -35,7 +40,8 @@ router = APIRouter(
 
 @router.post(
     "",
-    response_model=ChatResponse
+    response_model=ChatResponse,
+    response_model_exclude_none=True
 )
 def chat(
     request: ChatRequest,
@@ -104,6 +110,43 @@ def get_history(
     return chats
 
 
+
+# ------------------------
+#  Re-Generate question and answer
+# --------------------------------
+
+@router.post(
+    "/regenerate"
+)
+def regenerate_answer(
+    payload: RegenerateRequest,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    
+    # Save edited question
+    ChatHistoryService.save(
+        db=db,
+        user_id=user.id,
+        role="user",
+        content=payload.question
+    )
+
+    result = ChatService.ask(
+        question=payload.question,
+        db=db,
+        user=user
+    )
+
+    # Save regenerated answer
+    ChatHistoryService.save(
+        db=db,
+        user_id=user.id,
+        role="assistant",
+        content=result["answer"]
+    )
+
+    return result
 
 
 

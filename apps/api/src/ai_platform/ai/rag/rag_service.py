@@ -62,15 +62,56 @@ CONTENT:
             "rewritten_question"
         ]
 
+        # results = HybridSearchService.search(
+        #     query=rewritten_question,
+        #     filters=analysis.get(
+        #         "filters",
+        #         {}
+        #     ),
+        #     limit=RAGService.SEARCH_LIMIT
+        #     #uploaded_by=uploaded_by
+        # )
+
+        search_query = " ".join(
+            analysis.get(
+                "keywords",
+                []
+            )
+        )
+
+        if not search_query:
+            search_query = rewritten_question
+
+        print(
+            "KEYWORDS =",
+            analysis.get("keywords")
+        )
+
+        print(
+            "SEARCH QUERY =",
+            search_query
+        )
+
+        print(
+            "KEYWORDS =",
+            analysis.get("keywords")
+        )
+
+        print(
+            "SEARCH QUERY =",
+            search_query
+        )
+
         results = HybridSearchService.search(
-            query=rewritten_question,
+            query=search_query,
             filters=analysis.get(
                 "filters",
                 {}
             ),
             limit=RAGService.SEARCH_LIMIT
-            #uploaded_by=uploaded_by
         )
+
+
 
         if not results:
             return (
@@ -117,13 +158,25 @@ CONTENT:
             "rewritten_question"
         ]
 
-        # Merge document_ids into filters if provided
-        filters = analysis.get("filters", {})
+        filters = analysis.get(
+            "filters",
+            {}
+        )
         if document_ids:
             filters["document_ids"] = document_ids
 
+        search_query = " ".join(
+            analysis.get(
+                "keywords",
+                []
+            )
+        )
+
+        if not search_query:
+            search_query = rewritten_question
+
         results = HybridSearchService.search(
-            query=rewritten_question,
+            query=search_query,
             filters=filters,
             limit=RAGService.SEARCH_LIMIT
         )
@@ -150,14 +203,7 @@ CONTENT:
         context = RAGService.build_context(
             results
         )
-
-        print(
-            f"RAG: query='{rewritten_question}' "
-            f"results={len(results)} "
-            f"context_chunks="
-            f"{min(len(results), RAGService.CONTEXT_LIMIT)}"
-        )
-
+        
         return {
             "rewritten_question": rewritten_question,
             "context": context,

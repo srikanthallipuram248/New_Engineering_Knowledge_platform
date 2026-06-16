@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 
@@ -8,6 +8,12 @@ class ChatRequest(BaseModel):
 
 
 class SourceResponse(BaseModel):
+
+    model_config = ConfigDict(
+        exclude_none=True
+    )
+
+
     document_id: int
     filename: str
 
@@ -16,6 +22,9 @@ class SourceResponse(BaseModel):
 
     rerank_score: float
     snippet: str
+
+    # for source response
+    code: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

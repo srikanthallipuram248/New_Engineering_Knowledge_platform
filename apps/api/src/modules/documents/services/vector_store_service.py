@@ -118,9 +118,6 @@ class VectorStoreService:
             query_filter=qdrant_filter
         )
         
-        for result in results:
-            print("PAYLOAD =", result.payload)
-
         return [
             {
                 "score": result.score,

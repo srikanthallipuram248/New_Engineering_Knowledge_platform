@@ -80,14 +80,6 @@ class HybridSearchService:
         if not reranked:
             return []
 
-        print(
-            f"HYBRID: "
-            f"query='{query}' "
-            f"vector={len(vector_results)} "
-            f"bm25={len(bm25_results)} "
-            f"reranked={len(reranked)}"
-        )
-
         return reranked
     
     

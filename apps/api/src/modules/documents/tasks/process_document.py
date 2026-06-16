@@ -16,7 +16,4 @@ def process_document(
         text
     )
 
-    print(f"Text length: {len(text)}")
-    print(f"Chunks Created: {len(chunks)}")
-
     return chunks
