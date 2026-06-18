@@ -61,7 +61,6 @@ class AnalyzeAgent:
         "tell",
         "give",
         "explain",
-
         "about",
         "section",
         "document",
@@ -74,130 +73,41 @@ class AnalyzeAgent:
     }
 
 
-    # this method adding for intent router
-    # @classmethod
-    # def classify_intent(
-    #     cls,
-    #     question: str
-    # ) -> str:
+    DATA_WORDS = {
+        "count",
+        "total",
+        "sum",
+        "average",
+        "avg",
+        "maximum",
+        "minimum",
+        "highest",
+        "lowest",
+        "top",
+        "bottom",
+        "records",
+        "rows",
+        "entries",
+        "group",
+        "filter",
+        "statistics"
+    }
 
-    #     q = question.lower().strip()
+    # Data Words controller@classmethod
+    @classmethod
+    def is_data_question(
+        cls,
+        question: str
+    ):
 
-    #     # Greeting
-    #     if q in {
-    #         "hi",
-    #         "hello",
-    #         "hey",
-    #         "good morning",
-    #         "good afternoon",
-    #         "good evening"
-    #     }:
-    #         return "greeting"
+        q = question.lower()
 
-    #     # Help
-    #     if q in {
-    #         "help",
-    #         "what can you do",
-    #         "show capabilities",
-    #         "show commands"
-    #     }:
-    #         return "help"
+        return any(
+            word in q
+            for word in cls.DATA_WORDS
+        )
 
-    #     # Summarize
-    #     if any(
-    #         word in q
-    #         for word in [
-    #             "summarize",
-    #             "summary"
-    #         ]
-    #     ):
-    #         return "summarize"
 
-    #     # Compare
-    #     if any(
-    #         word in q
-    #         for word in [
-    #             "compare",
-    #             "difference",
-    #             "differences",
-    #             "vs"
-    #         ]
-    #     ):
-    #         return "compare"
-
-    #     # Code
-    #     code_keywords = [
-    #         "code",
-    #         "implementation",
-    #         "source code",
-    #         "class",
-    #         "function",
-    #         "method",
-    #         "service",
-    #         "repository",
-    #         "api",
-    #         "controller",
-    #         "endpoint",
-    #         "workflow",
-    #         "architecture",
-    #         "login",
-    #         "authentication",
-    #         "authorization",
-    #         "jwt",
-    #         "token",
-    #         "database",
-    #         "query",
-    #         "sql",
-    #         "schema"
-    #     ]
-
-    #     if any(
-    #         keyword in q
-    #         for keyword in code_keywords
-    #     ):
-    #         return "code"
-
-    #     # Document / File Questions
-    #     rag_keywords = [
-    #         ".pdf",
-    #         ".doc",
-    #         ".docx",
-    #         ".txt",
-    #         ".csv",
-    #         ".xlsx",
-    #         ".xls",
-    #         ".ppt",
-    #         ".pptx",
-    #         ".json",
-    #         ".xml",
-    #         ".md",
-    #         ".py",
-    #         ".js",
-    #         ".ts",
-    #         ".java",
-    #         ".go",
-    #         ".cs",
-    #         ".cpp",
-    #         ".html",
-    #         ".css",
-    #         ".sql",
-    #         ".yaml",
-    #         ".yml",
-    #         "document",
-    #         "file",
-    #         "report",
-    #         "dataset",
-    #         "uploaded"
-    #     ]
-
-    #     if any(
-    #         keyword in q
-    #         for keyword in rag_keywords
-    #     ):
-    #         return "rag"
-
-    #     # Default = General Chat
-    #     return "chat"
 
     @classmethod
     def classify_intent(
@@ -248,6 +158,8 @@ class AnalyzeAgent:
             ]
         ):
             return "compare"
+        if cls.is_data_question(q):
+            return "data"
 
         # Everything else
         return "rag"
@@ -359,6 +271,7 @@ class AnalyzeAgent:
                 "filters": regex_filters,
                 "needs_rag": intent in [
                     "rag",
+                    "data",
                     "code",
                     "summarize",
                     "compare"
@@ -498,4 +411,6 @@ class AnalyzeAgent:
             )
 
         return result
+    
+
     

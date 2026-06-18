@@ -23,6 +23,12 @@ def analyze_node(state):
     )
 
     #Update for Intent router graph
+
+    print(
+        "INTENT =",
+        analysis.get("intent")
+    )
+    
     return {
         "intent": analysis.get(
             "intent",
@@ -43,6 +49,7 @@ def analyze_node(state):
     }
 
 
+
 #-----------------
 # RAG Node
 #-------------------
@@ -51,7 +58,7 @@ def rag_node(state):
     data = RAGService.retrieve(
         question=state["rewritten_question"],
         history=state.get("history"),
-        document_ids=state.get("document_ids") or []
+        #document_ids=state.get("document_ids") or []
     )
     #New
     return {

@@ -34,7 +34,7 @@ class HybridSearchService:
 
             results = SearchService.search(
                 query=q,
-                limit=50,
+                limit=200,
                 filters=filters
             )
 
@@ -65,7 +65,7 @@ class HybridSearchService:
         bm25_results = BM25Service.search(
             query=query,
             documents=vector_results,
-            limit=30
+            limit=100
         )
 
         if not bm25_results:

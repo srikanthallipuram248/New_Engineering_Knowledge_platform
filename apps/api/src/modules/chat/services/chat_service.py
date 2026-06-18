@@ -67,15 +67,12 @@ class ChatService:
             for keyword in keywords
         )
 
-
-
-
     @staticmethod
     def ask(
         question,
         db,
         user,
-        document_ids=None
+        #document_ids=None
     ):
         history = ChatHistoryService.get_recent(
             db=db,
@@ -90,8 +87,8 @@ class ChatService:
             {
                 "question": question,
                 "history": history,
-                "uploaded_by": user.id,
-                "document_ids": document_ids or []
+                "uploaded_by": user.id
+                #"document_ids": document_ids or []
             }
         )
 

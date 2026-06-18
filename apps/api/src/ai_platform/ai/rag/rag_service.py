@@ -13,9 +13,9 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 
 class RAGService:
 
-    SEARCH_LIMIT = 15
-    CONTEXT_LIMIT = 10
-    MAX_CONTEXT_CHARS = 30000
+    SEARCH_LIMIT = 100
+    CONTEXT_LIMIT = 30
+    MAX_CONTEXT_CHARS = 150000
 
     @staticmethod
     def build_context(results):
@@ -62,16 +62,6 @@ CONTENT:
             "rewritten_question"
         ]
 
-        # results = HybridSearchService.search(
-        #     query=rewritten_question,
-        #     filters=analysis.get(
-        #         "filters",
-        #         {}
-        #     ),
-        #     limit=RAGService.SEARCH_LIMIT
-        #     #uploaded_by=uploaded_by
-        # )
-
         search_query = " ".join(
             analysis.get(
                 "keywords",
@@ -92,16 +82,6 @@ CONTENT:
             search_query
         )
 
-        print(
-            "KEYWORDS =",
-            analysis.get("keywords")
-        )
-
-        print(
-            "SEARCH QUERY =",
-            search_query
-        )
-
         results = HybridSearchService.search(
             query=search_query,
             filters=analysis.get(
@@ -111,6 +91,20 @@ CONTENT:
             limit=RAGService.SEARCH_LIMIT
         )
 
+        print("=" * 80)
+        print("QUESTION =", question)
+        print("SEARCH QUERY =", search_query)
+        print("RESULT COUNT =", len(results))
+
+        for r in results[:10]:
+            print(
+                "FILE=",
+                r.get("filename"),
+                " SCORE=",
+                r.get("rerank_score")
+            )
+
+        print("=" * 80)
 
 
         if not results:
@@ -146,7 +140,7 @@ CONTENT:
     def retrieve(
         question: str,
         history: list = None,
-        document_ids: list = None
+        #document_ids: list = None
     ):
 
         analysis = AnalyzeAgent.analyze(
@@ -162,8 +156,8 @@ CONTENT:
             "filters",
             {}
         )
-        if document_ids:
-            filters["document_ids"] = document_ids
+        # if document_ids:
+        #     filters["document_ids"] = document_ids
 
         search_query = " ".join(
             analysis.get(
@@ -180,6 +174,21 @@ CONTENT:
             filters=filters,
             limit=RAGService.SEARCH_LIMIT
         )
+
+        print("=" * 80)
+        print("QUESTION =", question)
+        print("SEARCH QUERY =", search_query)
+        print("RESULT COUNT =", len(results))
+
+        for r in results[:10]:
+            print(
+                "FILE=",
+                r.get("filename"),
+                " SCORE=",
+                r.get("rerank_score")
+            )
+
+        print("=" * 80)
 
         if not results:
             return {

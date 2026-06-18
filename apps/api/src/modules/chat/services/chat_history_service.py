@@ -36,12 +36,12 @@ class ChatHistoryService:
         limit = 10
     ):
         return (
-            db.query(ChatMessage)
+            db.query(ChatHistory)
             .filter(
-                ChatMessage.user_id == user_id
+                ChatHistory.user_id == user_id
             )
             .order_by(
-                ChatMessage.id.desc()
+                ChatHistory.id.desc()
             )
             .limit(limit)
             .all()
