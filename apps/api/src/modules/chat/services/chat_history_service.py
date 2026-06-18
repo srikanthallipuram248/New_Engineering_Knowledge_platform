@@ -1,7 +1,3 @@
-from src.modules.chat.models.chat_history import (
-    ChatHistory
-)
-
 from src.modules.chat.models.chat_message import (
     ChatMessage
 )
@@ -33,15 +29,15 @@ class ChatHistoryService:
     def get_recent(
         db,
         user_id,
-        limit = 10
+        limit=10
     ):
         return (
-            db.query(ChatHistory)
+            db.query(ChatMessage)
             .filter(
-                ChatHistory.user_id == user_id
+                ChatMessage.user_id == user_id
             )
             .order_by(
-                ChatHistory.id.desc()
+                ChatMessage.id.desc()
             )
             .limit(limit)
             .all()

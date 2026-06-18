@@ -73,42 +73,6 @@ class AnalyzeAgent:
     }
 
 
-    DATA_WORDS = {
-        "count",
-        "total",
-        "sum",
-        "average",
-        "avg",
-        "maximum",
-        "minimum",
-        "highest",
-        "lowest",
-        "top",
-        "bottom",
-        "records",
-        "rows",
-        "entries",
-        "group",
-        "filter",
-        "statistics"
-    }
-
-    # Data Words controller@classmethod
-    @classmethod
-    def is_data_question(
-        cls,
-        question: str
-    ):
-
-        q = question.lower()
-
-        return any(
-            word in q
-            for word in cls.DATA_WORDS
-        )
-
-
-
     @classmethod
     def classify_intent(
         cls,
@@ -158,8 +122,6 @@ class AnalyzeAgent:
             ]
         ):
             return "compare"
-        if cls.is_data_question(q):
-            return "data"
 
         # Everything else
         return "rag"
@@ -225,16 +187,28 @@ class AnalyzeAgent:
             question.lower()
         )
 
-        return list(
-            dict.fromkeys(
-                [
-                    word
-                    for word in question.split()
-                    if len(word) > 2
-                    and word not in cls.STOP_WORDS
-                ]
-            )
-        )
+        stop_words = {
+            "total",
+            "count",
+            "records",
+            "record",
+            "how",
+            "many",
+            "all",
+            "show",
+            "give",
+            "tell",
+            "what",
+            "is",
+            "are"
+        }
+
+        return [
+            word
+            for word in question.split()
+            if len(word) > 2
+            and word not in stop_words
+        ]
 
     @classmethod
     def analyze(
@@ -271,7 +245,6 @@ class AnalyzeAgent:
                 "filters": regex_filters,
                 "needs_rag": intent in [
                     "rag",
-                    "data",
                     "code",
                     "summarize",
                     "compare"

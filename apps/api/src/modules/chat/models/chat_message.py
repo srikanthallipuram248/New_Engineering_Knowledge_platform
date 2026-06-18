@@ -42,6 +42,10 @@ class ChatMessage(Base):
         nullable=False
     )
 
+    session_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("chat_session.id")
+    )
 
 
 

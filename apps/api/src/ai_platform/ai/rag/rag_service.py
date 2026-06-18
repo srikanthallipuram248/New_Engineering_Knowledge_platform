@@ -11,11 +11,12 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 )
 
 
+
 class RAGService:
 
-    SEARCH_LIMIT = 100
-    CONTEXT_LIMIT = 30
-    MAX_CONTEXT_CHARS = 150000
+    SEARCH_LIMIT = 50
+    CONTEXT_LIMIT = 8
+    MAX_CONTEXT_CHARS = 15000
 
     @staticmethod
     def build_context(results):
@@ -28,19 +29,23 @@ class RAGService:
 
         for r in top_results:
 
+            text = r["text"][:2000]
+
             context_parts.append(
                 f"""
-FILENAME: {r['filename']}
-DOCUMENT_ID: {r['document_id']}
+        FILE: {r['filename']}
 
-CONTENT:
-{r['text']}
-"""
+        {text}
+        """
             )
 
         context = "\n\n".join(
             context_parts
         )
+
+        print("=" * 80)
+        print("CONTEXT SIZE =", len(context))
+        print("=" * 80)
 
         return context[
             :RAGService.MAX_CONTEXT_CHARS
@@ -62,15 +67,19 @@ CONTENT:
             "rewritten_question"
         ]
 
-        search_query = " ".join(
-            analysis.get(
-                "keywords",
-                []
-            )
+        keywords = analysis.get(
+            "keywords",
+            []
         )
 
-        if not search_query:
-            search_query = rewritten_question
+        # Always use full question for retrieval
+
+        search_query = rewritten_question
+
+        print("QUESTION =", question)
+        print("REWRITTEN =", rewritten_question)
+        print("KEYWORDS =", keywords)
+        print("SEARCH QUERY =", search_query)
 
         print(
             "KEYWORDS =",
@@ -159,15 +168,19 @@ CONTENT:
         # if document_ids:
         #     filters["document_ids"] = document_ids
 
-        search_query = " ".join(
-            analysis.get(
-                "keywords",
-                []
-            )
+        keywords = analysis.get(
+            "keywords",
+            []
         )
 
-        if not search_query:
-            search_query = rewritten_question
+        # Always use full question for retrieval
+
+        search_query = rewritten_question
+
+        print("QUESTION =", question)
+        print("REWRITTEN =", rewritten_question)
+        print("KEYWORDS =", keywords)
+        print("SEARCH QUERY =", search_query)
 
         results = HybridSearchService.search(
             query=search_query,

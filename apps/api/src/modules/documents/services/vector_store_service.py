@@ -35,7 +35,7 @@ class VectorStoreService:
             self.client.create_collection(
                 collection_name="documents",
                 vectors_config=VectorParams(
-                    size=384,
+                    size=768,
                     distance=Distance.COSINE
                 )
             )
@@ -62,6 +62,7 @@ class VectorStoreService:
                         "filename": filename,
                         "uploaded_by": uploaded_by,
                         "uploaded_by_name": uploaded_by_name,
+                        "file_type": filename.split(".")[-1],
                         "text": text
                     }
                 )

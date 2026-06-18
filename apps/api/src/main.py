@@ -18,9 +18,10 @@ from src.modules.analyzer.api.analyzer_router import (
     router as analyzer_router
 )
 
-from src.modules.documents.services.vector_store_service import (
-    VectorStoreService
+from src.modules.chat.api.chat_session_router import (
+    router as chat_session_router
 )
+
 
 #CREATE TABLES
 Base.metadata.create_all(
@@ -63,6 +64,12 @@ app.include_router(
 #chat router
 app.include_router(
     chat_router,
+    prefix="/api/v1"
+)
+
+# Chat session
+app.include_router(
+    chat_session_router,
     prefix="/api/v1"
 )
 

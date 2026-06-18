@@ -3,8 +3,6 @@ from sentence_transformers import CrossEncoder
 
 class RerankerService:
 
-    MIN_RERANK_SCORE = -5
-
     model = CrossEncoder(
         "cross-encoder/ms-marco-MiniLM-L-6-v2"
     )
@@ -41,13 +39,6 @@ class RerankerService:
             reverse=True
         )
 
-        filtered = [
-            r 
-            for r in ranked
-            if r["rerank_score"] > cls.MIN_RERANK_SCORE
-        ]
-
-        return filtered[:top_k]
-    
+        return ranked[:top_k]
     
     
