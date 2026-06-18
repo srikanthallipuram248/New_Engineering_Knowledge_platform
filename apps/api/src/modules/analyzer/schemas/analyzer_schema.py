@@ -46,6 +46,7 @@ class RepoAnalysisResult(BaseModel):
     mermaid_arch_diagram: str
     mermaid_flow_diagram: str
     folder_tree: str = ""           # injected from scan state, not LLM
+    document_id: int | None = None  # injected after indexing, not LLM
     key_modules: list[KeyModule]
     file_descriptions: list[FileDescription]
     core_features: list[Feature]

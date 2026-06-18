@@ -22,18 +22,16 @@ def analyze_node(state):
         state.get("history")
     )
 
-    #Update for Intent router graph
+    intent = analysis.get("intent", "rag")
 
-    print(
-        "INTENT =",
-        analysis.get("intent")
-    )
-    
+    # If the user scoped the chat to specific documents, always use
+    # the RAG path — their intent is clearly to query those documents,
+    # regardless of how the question is phrased.
+    if state.get("document_ids"):
+        intent = "rag"
+
     return {
-        "intent": analysis.get(
-            "intent",
-            "rag"
-        ),
+        "intent": intent,
         "rewritten_question": analysis.get(
             "rewritten_question",
             state["question"]
@@ -54,13 +52,11 @@ def analyze_node(state):
 # RAG Node
 #-------------------
 def rag_node(state):
-    #new
     data = RAGService.retrieve(
         question=state["rewritten_question"],
         history=state.get("history"),
-        #document_ids=state.get("document_ids") or []
+        document_ids=state.get("document_ids") or []
     )
-    #New
     return {
         "context": data["context"],
         "sources": data["results"]
@@ -96,8 +92,3 @@ def direct_chat_node(state):
     return {
         "answer": answer
     }
-
-
-
-
-

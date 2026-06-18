@@ -54,6 +54,9 @@ interface LibraryChatPanelProps {
   newlyUploadedCount?: number
   onAcknowledgeNewUploads?: () => void
   onClearDocs?: () => Promise<void>
+  /** Activate this session id (e.g. one just created from outside, like
+   *  "Ask about this repo" on the Analyzer page) as soon as it appears. */
+  pendingFocusSessionId?: string | null
 }
 
 type NewChatDialog = null | 'choosing'  // null = no dialog, 'choosing' = showing keep/clear dialog
@@ -72,6 +75,7 @@ export function LibraryChatPanel({
   newlyUploadedCount = 0,
   onAcknowledgeNewUploads,
   onClearDocs,
+  pendingFocusSessionId,
 }: LibraryChatPanelProps) {
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions())
@@ -132,6 +136,17 @@ export function LibraryChatPanel({
     })()
     return () => { cancelled = true }
   }, [])
+
+  // ── Pick up sessions created outside this panel (e.g. "Ask about this
+  // repo" on the Analyzer page, which saves a session directly to storage
+  // before navigating here) ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!pendingFocusSessionId) return
+    setActiveSessionId(pendingFocusSessionId)
+    setActiveSessionIdState(pendingFocusSessionId)
+    setSessions(loadSessions())
+    setConfirmDelete(false)
+  }, [pendingFocusSessionId])
 
   // ── Auto-scroll ────────────────────────────────────────────────────────
   useEffect(() => {

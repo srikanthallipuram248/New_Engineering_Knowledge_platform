@@ -14,12 +14,23 @@ type State =
   | { kind: 'error'; message: string; lastUrl: string }
   | { kind: 'result'; data: RepoAnalysisResult; url: string }
 
-const STORAGE_KEY = 'ekp.analyzer.state'
+// Scope the storage key per user so different accounts on the same
+// browser don't share each other's analysis results.
+function getStorageKey(): string {
+  try {
+    const token = localStorage.getItem('token')
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload?.sub) return `ekp.analyzer.state.${payload.sub}`
+    }
+  } catch { /* ignore */ }
+  return 'ekp.analyzer.state'
+}
 
 // Initial load from storage
 let globalState: State = (() => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(getStorageKey())
     if (saved) {
       const parsed = JSON.parse(saved) as State
       // If it was left in loading, reset to idle on hard reload since the network request is gone
@@ -39,7 +50,7 @@ const listeners = new Set<(state: State) => void>()
 function updateGlobalState(nextState: State) {
   globalState = nextState
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState))
+    localStorage.setItem(getStorageKey(), JSON.stringify(nextState))
   } catch {
     // ignore
   }

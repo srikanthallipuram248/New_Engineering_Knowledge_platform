@@ -30,6 +30,13 @@ def router_context(state):
     if context.strip():
         return "rag_found"
 
+    # If the user scoped to specific documents and we found nothing,
+    # still go through the chat node so the LLM can say "I couldn't
+    # find that in the selected document" rather than falling back to
+    # the generic direct_chat agent which ignores document context.
+    if state.get("document_ids"):
+        return "rag_found"
+
     return "no_results"
 
 
