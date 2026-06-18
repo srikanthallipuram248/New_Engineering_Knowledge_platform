@@ -15,4 +15,8 @@ def calculate_file_hash(file_path: str):
     return sha256.hexdigest()
 
 
+def calculate_text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 

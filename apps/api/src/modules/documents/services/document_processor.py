@@ -141,6 +141,38 @@ class DocumentProcessor:
             text += "\n"
 
         return text
+    
+
+
+    @staticmethod
+    def extract_excel_rows(path: Path):
+
+        excel_file = pd.ExcelFile(path)
+
+        rows = []
+
+        for sheet in excel_file.sheet_names:
+
+            df = pd.read_excel(
+                path,
+                sheet_name=sheet
+            )
+
+            df = df.fillna("")
+
+            for _, row in df.iterrows():
+
+                row_text = " | ".join(
+                    f"{col}={row[col]}"
+                    for col in df.columns
+                )
+
+                rows.append(row_text)
+
+        return rows
+
+
+
 
     @staticmethod
     def _extract_pptx(path: Path) -> str:
@@ -164,33 +196,14 @@ class DocumentProcessor:
     @staticmethod
     def chunk_text(
         text: str,
-        #chunk_size: int = 1000,
-        #overlap: int = 100
     ) -> list[str]:
 
         if not text.strip():
             return []
 
-        # chunks = []
-        # start = 0
-
-        # while start < len(text):
-
-        #     end = start + chunk_size
-
-        #     chunks.append(
-        #         text[start:end]
-        #     )
-
-        #     start += (
-        #         chunk_size - overlap
-        #     )
-
-        # return chunks
-
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=800,
+            chunk_overlap=150,
             separators=[
                 "\n\n",
                 "\n",

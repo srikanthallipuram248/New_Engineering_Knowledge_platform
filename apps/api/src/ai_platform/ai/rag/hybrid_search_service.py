@@ -10,23 +10,21 @@ from src.ai_platform.ai.rag.reranker_service import (
     RerankerService
 )
 
-from src.ai_platform.ai.rag.query_expansion_service import (
-    QueryExpansionService
-)
-
 
 class HybridSearchService:
 
     @staticmethod
     def search(
         query: str,
-        limit: int = 10,
+        limit: int = 50,
         filters: dict = None
     ):
 
-        expanded_queries = QueryExpansionService.expand(
-            query
-        )
+        # expanded_queries = QueryExpansionService.expand(
+        #     query
+        # )
+
+        expanded_queries = [query]
 
         all_results = []
 
@@ -59,14 +57,48 @@ class HybridSearchService:
             unique_results.values()
         )
 
+        vector_results = [
+            r
+            for r in vector_results
+            if r.get("score", 0) > 0.45
+        ]
+
+        query_lower = query.lower()
+
+        for r in vector_results:
+
+            text = r["text"].lower()
+
+            if query_lower in text:
+                r["score"] += 1.0
+        
+        print("=" * 80)
+        print("VECTOR RESULTS =", len(vector_results))
+
+        for r in vector_results[:10]:
+            print(
+                r.get("filename"),
+                r.get("score"),
+                r.get("text", "")[:200]
+            )
+
         if not vector_results:
             return []
 
         bm25_results = BM25Service.search(
             query=query,
             documents=vector_results,
-            limit=30
+            limit=50
         )
+
+        print("=" * 80)
+        print("BM25 RESULTS =", len(bm25_results))
+
+        for r in bm25_results[:10]:
+            print(
+                r.get("filename"),
+                r.get("bm25_score")
+            )
 
         if not bm25_results:
             return []
@@ -74,8 +106,17 @@ class HybridSearchService:
         reranked = RerankerService.rerank(
             query=query,
             results=bm25_results,
-            top_k=limit
+            top_k=min(limit, 15)
         )
+
+        print("=" * 80)
+        print("RERANK RESULTS =", len(reranked))
+
+        for r in reranked[:10]:
+            print(
+                r.get("filename"),
+                r.get("rerank_score")
+            )
 
         if not reranked:
             return []

@@ -34,6 +34,7 @@ def clone_and_scan(state: RepoAnalysisState) -> dict:
         "folder_tree": ctx.folder_tree,
         "manifest_content": ctx.manifest_content,
         "source_snippets": ctx.source_snippets,
+        "indexable_files": ctx.indexable_files,
     }
 
 

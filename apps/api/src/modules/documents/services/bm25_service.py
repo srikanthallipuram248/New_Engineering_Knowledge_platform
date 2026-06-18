@@ -7,7 +7,7 @@ class BM25Service:
     def search(
         query: str,
         documents: list,
-        limit: int = 5
+        limit: int = 50
     ):
 
         if not documents:
@@ -37,12 +37,11 @@ class BM25Service:
             results.append(
                 {
                     "score": float(score),
+                    "bm25_score": float(score),
                     "text": doc["text"],
                     "document_id": doc["document_id"],
                     "filename": doc.get("filename"),
-                    "uploaded_by": doc.get(
-                        "uploaded_by"
-                    ),
+                    "uploaded_by": doc.get("uploaded_by"),
                     "uploaded_by_name": doc.get(
                         "uploaded_by_name"
                     )

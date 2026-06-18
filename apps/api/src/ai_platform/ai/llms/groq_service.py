@@ -38,13 +38,28 @@ class GroqService:
             {
                 "role": "user",
                 "content": f"""
-CONTEXT:
+QUESTION:
+{question}
 
+CONTEXT:
 {context}
 
-QUESTION:
+IMPORTANT:
 
-{question}
+If the answer exists in the context,
+answer ONLY from context.
+
+For tables, excel sheets,
+csv files and structured data:
+
+- Count rows if user asks count
+- Calculate totals if user asks total
+- Calculate averages if user asks average
+- Use only context data
+
+Never say you don't know if
+the required information exists
+in the provided context.
 """
             }
         )
