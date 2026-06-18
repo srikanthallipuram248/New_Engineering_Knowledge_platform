@@ -67,24 +67,43 @@ def chat(
     # )
 
     #New
-    response = ChatService.ask(
-        question=request.question,
-        document_ids=request.document_ids,
-        db=db,
-        user=user
-    )
+    try:
+        response = ChatService.ask(
+            question=request.question,
+            document_ids=request.document_ids,
+            db=db,
+            user=user
+        )
 
-    ChatHistoryService.save(
-        db=db,
-        user_id=user.id,
-        role="assistant",
-        content=response["answer"]
-    )
+        ChatHistoryService.save(
+            db=db,
+            user_id=user.id,
+            role="assistant",
+            content=response["answer"]
+        )
 
-    return ChatResponse(
-        answer=response["answer"],
-        sources=response["sources"]
-    )
+        return ChatResponse(
+            answer=response["answer"],
+            sources=response.get("sources", []),
+            intent=response.get("intent", "rag")
+        )
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        # Fallback response
+        error_msg = "I encountered an error while processing your request. Please try again later."
+        
+        ChatHistoryService.save(
+            db=db,
+            user_id=user.id,
+            role="assistant",
+            content=error_msg
+        )
+        
+        return ChatResponse(
+            answer=error_msg,
+            sources=[],
+            intent="chat"
+        )
 
     
     

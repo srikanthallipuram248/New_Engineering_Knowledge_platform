@@ -146,13 +146,15 @@ CONTENT:
     def retrieve(
         question: str,
         history: list = None,
-        document_ids: list = None
+        document_ids: list = None,
+        analysis: dict = None
     ):
 
-        analysis = AnalyzeAgent.analyze(
-            question,
-            history
-        )
+        if not analysis:
+            analysis = AnalyzeAgent.analyze(
+                question,
+                history
+            )
 
         rewritten_question = analysis[
             "rewritten_question"

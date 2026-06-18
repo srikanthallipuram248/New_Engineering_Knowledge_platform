@@ -29,6 +29,7 @@ class SourceResponse(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    intent: str
 
     sources: List[SourceResponse] = Field(
         default_factory=list

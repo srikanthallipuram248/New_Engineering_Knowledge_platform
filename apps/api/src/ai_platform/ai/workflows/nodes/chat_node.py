@@ -12,6 +12,7 @@ from src.ai_platform.ai.agents.direct_chat_agent import (
 
 
 
+
 #-------------------
 # Analyze Node
 #-------------------
@@ -47,13 +48,20 @@ def analyze_node(state):
 # RAG Node
 #-------------------
 def rag_node(state):
-    #new
+    # Pass the state values as the 'analysis' dict to avoid redundant analysis
+    analysis = {
+        "rewritten_question": state.get("rewritten_question", state["question"]),
+        "keywords": state.get("keywords", []),
+        "filters": state.get("filters", {})
+    }
+    
     data = RAGService.retrieve(
-        question=state["rewritten_question"],
+        question=state["question"],
         history=state.get("history"),
-        document_ids=state.get("document_ids") or []
+        document_ids=state.get("document_ids") or [],
+        analysis=analysis
     )
-    #New
+
     return {
         "context": data["context"],
         "sources": data["results"]
@@ -62,10 +70,16 @@ def rag_node(state):
 
 
 #----------------
-# Chat Node
+# RAG Chat Node
 #------------------
 def chat_node(state):
     #New
+    if not state.get("context", "").strip():
+        return {
+            "answer": "I could not find any relevant information in the repository to answer your question.",
+            "sources": state.get("sources", [])
+        }
+    
     answer = ChatAgent.answer(
         question=state["rewritten_question"],
         context=state["context"],
@@ -77,17 +91,14 @@ def chat_node(state):
     }
 
 
-#------------------
-# Direct chat node
-# -----------------
-
-def direct_chat_node(state):
-    answer = DirectChatAgent.answer(
-        state["question"]
-    )
-
+#--------------------
+# General Chat Node
+#--------------------
+def general_chat_node(state):
     return {
-        "answer": answer
+        "answer": "I don't know based on the uploaded documents.",
+        "intent": "chat",
+        "sources": []
     }
 
 
