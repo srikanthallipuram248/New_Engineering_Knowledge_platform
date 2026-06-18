@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { useNavigate } from 'react-router-dom'
 import {
   GitBranch,
   Sparkles,
@@ -14,6 +15,7 @@ import {
   Folders,
   ArrowRightLeft,
   FileCode,
+  MessageSquare,
 } from 'lucide-react'
 import type { RepoAnalysisResult } from '@/services/api'
 import { Badge } from '@/components/ui/badge'
@@ -65,8 +67,16 @@ function techBadgeClass(tech: string): string {
 }
 
 export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps) {
+  const navigate = useNavigate()
   const has = (v: unknown) =>
     Array.isArray(v) ? v.length > 0 : Boolean(v && v !== 'Unknown')
+
+  function handleAskAboutRepo() {
+    if (result.document_id == null) return
+    navigate('/library', {
+      state: { askDocumentId: result.document_id, repoName: result.repo_name },
+    })
+  }
 
   return (
     <motion.article
@@ -112,9 +122,17 @@ export function AnalysisResultCard({ result, onReset }: AnalysisResultCardProps)
             )}
           </div>
 
-          <Button variant="outline" size="sm" onClick={onReset} className="shrink-0">
-            New analysis
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {result.document_id != null && (
+              <Button variant="default" size="sm" onClick={handleAskAboutRepo} className="gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Ask about this repo
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={onReset}>
+              New analysis
+            </Button>
+          </div>
         </div>
       </motion.header>
 

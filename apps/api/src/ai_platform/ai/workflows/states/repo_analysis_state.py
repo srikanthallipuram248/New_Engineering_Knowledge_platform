@@ -9,6 +9,7 @@ class RepoAnalysisState(TypedDict):
     folder_tree: str
     manifest_content: str
     source_snippets: str
+    indexable_files: list  # list[IndexableFile] — for chat indexing, not the LLM
     raw_output: str
     analysis_result: Optional[dict]
     retry_count: int

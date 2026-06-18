@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   BookOpen,
@@ -19,9 +20,16 @@ import {
   type UploadItemState,
 } from '@/components/library/FileRow'
 import { LibraryChatPanel } from '@/components/library/LibraryChatPanel'
+import {
+  createNewSession,
+  saveSession,
+  setActiveSessionId,
+} from '@/components/library/ChatSessionManager'
 import { cn } from '@/lib/utils'
 
 export default function LibraryPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [docs, setDocs] = useState<LibraryDocument[]>([])
   const [uploads, setUploads] = useState<UploadItemState[]>([])
   // When a source card in the chat is clicked, briefly highlight the
@@ -33,6 +41,9 @@ export default function LibraryPage() {
   const [newlyUploadedCount, setNewlyUploadedCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  // Set when "Ask about this repo" creates a session — tells the chat
+  // panel to activate it as soon as it mounts.
+  const [pendingFocusSessionId, setPendingFocusSessionId] = useState<string | null>(null)
 
   // Initial fetch
   useEffect(() => {
@@ -54,6 +65,24 @@ export default function LibraryPage() {
       cancelled = true
     }
   }, [])
+
+  // Coming from "Ask about this repo" on the Analyzer page — start a chat
+  // session scoped to that repo's document so the user lands in a
+  // focused thread instead of "all docs".
+  useEffect(() => {
+    const askDocumentId = (location.state as { askDocumentId?: number } | null)
+      ?.askDocumentId
+    if (askDocumentId == null || loading) return
+
+    const docNames = docs.map((d) => d.file_name)
+    const session = createNewSession(docNames, [askDocumentId])
+    saveSession(session)
+    setActiveSessionId(session.id)
+    setPendingFocusSessionId(session.id)
+
+    // Clear the nav state so this doesn't refire on remount/back-nav.
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.state, location.pathname, loading, docs, navigate])
 
   const updateUpload = useCallback(
     (id: string, updater: (s: UploadItemState) => UploadItemState) => {
@@ -282,6 +311,7 @@ export default function LibraryPage() {
             newlyUploadedCount={newlyUploadedCount}
             onAcknowledgeNewUploads={() => setNewlyUploadedCount(0)}
             onClearDocs={handleClearDocs}
+            pendingFocusSessionId={pendingFocusSessionId}
           />
         </div>
       </div>

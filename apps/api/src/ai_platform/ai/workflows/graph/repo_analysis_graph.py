@@ -67,7 +67,7 @@ def build_repo_analysis_graph():
 _graph = build_repo_analysis_graph()
 
 
-def run_repo_analysis_graph(git_url: str) -> dict:
+def run_repo_analysis_graph(git_url: str) -> tuple[dict, list]:
     initial_state: RepoAnalysisState = {
         "git_url":          git_url,
         "repo_name":        "",
@@ -76,6 +76,7 @@ def run_repo_analysis_graph(git_url: str) -> dict:
         "folder_tree":      "",
         "manifest_content": "",
         "source_snippets":  "",
+        "indexable_files":  [],
         "raw_output":       "",
         "analysis_result":  None,
         "retry_count":      0,
@@ -92,4 +93,5 @@ def run_repo_analysis_graph(git_url: str) -> dict:
     result = final_state["analysis_result"]
     # Inject the scanned folder tree directly — LLM doesn't need to regenerate it
     result["folder_tree"] = final_state.get("folder_tree", "")
-    return result
+    indexable_files = final_state.get("indexable_files", [])
+    return result, indexable_files

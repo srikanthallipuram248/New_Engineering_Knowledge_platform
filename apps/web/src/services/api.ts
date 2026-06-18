@@ -4,6 +4,10 @@ function getToken(): string | null {
   return localStorage.getItem('token')
 }
 
+function getRefreshToken(): string | null {
+  return localStorage.getItem('refresh_token')
+}
+
 function authHeaders(): HeadersInit {
   const token = getToken()
   return {
@@ -12,28 +16,82 @@ function authHeaders(): HeadersInit {
   }
 }
 
+function redirectToLogin() {
+  try {
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+  } catch { /* ignore */ }
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    const next = encodeURIComponent(window.location.pathname + window.location.search)
+    window.location.replace(`/login?expired=1&next=${next}`)
+  }
+}
+
+// Prevent multiple concurrent refresh calls
+let refreshPromise: Promise<boolean> | null = null
+
+async function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) return false
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      })
+      if (!res.ok) return false
+      const data = await res.json()
+      localStorage.setItem('token', data.access_token)
+      return true
+    } catch {
+      return false
+    } finally {
+      refreshPromise = null
+    }
+  })()
+  return refreshPromise
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    // 401 = token expired/invalid. Clear it and bounce to /login so
-    // the user gets a clear "session expired" flow instead of being
-    // stuck on a half-broken page.
     if (res.status === 401) {
-      try {
-        localStorage.removeItem('token')
-      } catch {
-        /* ignore */
+      // Try to silently refresh the access token before giving up
+      const refreshed = await tryRefresh()
+      if (refreshed) {
+        // Caller will need to retry — signal this with a special error
+        throw new _RetryError()
       }
-      // Only redirect if we're not already on the login page
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        const next = encodeURIComponent(window.location.pathname + window.location.search)
-        window.location.replace(`/login?expired=1&next=${next}`)
-      }
+      redirectToLogin()
       throw new Error('Your session has expired — please sign in again.')
     }
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'Request failed')
   }
   return res.json()
+}
+
+class _RetryError extends Error {
+  constructor() { super('retry') }
+}
+
+// Wraps fetch + handleResponse with one automatic retry after token refresh
+async function apiFetch<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, init)
+  try {
+    return await handleResponse<T>(res)
+  } catch (err) {
+    if (err instanceof _RetryError) {
+      // Token was refreshed — retry with new token
+      const retried = await fetch(input, {
+        ...init,
+        headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${getToken()}` },
+      })
+      return handleResponse<T>(retried)
+    }
+    throw err
+  }
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -44,8 +102,9 @@ export async function login(email: string, password: string): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  const data = await handleResponse<{ access_token: string }>(res)
+  const data = await handleResponse<{ access_token: string; refresh_token?: string }>(res)
   localStorage.setItem('token', data.access_token)
+  if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
   return data.access_token
 }
 
@@ -64,6 +123,7 @@ export async function register(
 
 export function logout(): void {
   localStorage.removeItem('token')
+  localStorage.removeItem('refresh_token')
 }
 
 // ── Analyzer ──────────────────────────────────────────────────────────────
@@ -81,6 +141,7 @@ export interface RepoAnalysisResult {
   mermaid_arch_diagram: string
   mermaid_flow_diagram: string
   folder_tree: string
+  document_id: number | null
   key_modules: KeyModule[]
   file_descriptions: FileDescription[]
   core_features: Feature[]
@@ -127,7 +188,7 @@ export interface ChatHistoryMessage {
 }
 
 export async function askChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
-  const res = await fetch(`${BASE}/chat`, {
+  return apiFetch<ChatApiResponse>(`${BASE}/chat`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
@@ -135,23 +196,20 @@ export async function askChat(question: string, documentIds?: number[]): Promise
       ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
     }),
   })
-  return handleResponse<ChatApiResponse>(res)
 }
 
 export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
-  const res = await fetch(`${BASE}/chat/history`, {
+  return apiFetch<ChatHistoryMessage[]>(`${BASE}/chat/history`, {
     headers: authHeaders(),
   })
-  return handleResponse<ChatHistoryMessage[]>(res)
 }
 
 export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
-  const res = await fetch(`${BASE}/analyzer/analyze`, {
+  return apiFetch<RepoAnalysisResult>(`${BASE}/analyzer/analyze`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ git_url: gitUrl }),
   })
-  return handleResponse<RepoAnalysisResult>(res)
 }
 
 // ── Documents / Library ─────────────────────────────────────────────────
@@ -179,18 +237,16 @@ export interface UploadProgress {
 }
 
 export async function listDocuments(): Promise<LibraryDocument[]> {
-  const res = await fetch(`${BASE}/documents`, {
+  return apiFetch<LibraryDocument[]>(`${BASE}/documents`, {
     headers: authHeaders(),
   })
-  return handleResponse<LibraryDocument[]>(res)
 }
 
 export async function deleteDocument(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/documents/${id}`, {
+  await apiFetch<{ message?: string }>(`${BASE}/documents/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })
-  await handleResponse<{ message?: string }>(res)
 }
 
 /**
