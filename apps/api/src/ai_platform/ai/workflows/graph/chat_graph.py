@@ -6,38 +6,17 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
     chat_node,
-    # for intent router
-    direct_chat_node
+    general_chat_node
 )
 
 
 # Create Router fuction for intent router graph
 def route_intent(state):
 
-    return state.get(
-        "intent",
-        "rag"
-    )
-
-
-def router_context(state):
-
-    context = state.get(
-        "context",
-        ""
-    )
-
-    if context.strip():
-        return "rag_found"
-
-    # If the user scoped to specific documents and we found nothing,
-    # still go through the chat node so the LLM can say "I couldn't
-    # find that in the selected document" rather than falling back to
-    # the generic direct_chat agent which ignores document context.
-    if state.get("document_ids"):
-        return "rag_found"
-
-    return "no_results"
+    if state.get("intent") == "chat":
+        return "chat"
+    
+    return "rag"
 
 
 def build_chat_graph():
@@ -60,10 +39,9 @@ def build_chat_graph():
         chat_node
     )
 
-    # for intent router
     graph.add_node(
-        "direct_chat",
-        direct_chat_node
+        "general_chat",
+        general_chat_node
     )
 
     # Entry Points
@@ -71,51 +49,29 @@ def build_chat_graph():
         "analyze"
     )
 
-    # graph.add_edge(
-    #     "analyze",
-    #     "rag"
-    # )
-
     # Intent Router
     graph.add_conditional_edges(
         "analyze",
         route_intent,
         {
-            "greeting": "direct_chat",
-            "help": "direct_chat",
-            "chat": "direct_chat",
-
-            "summarize": "rag",
-            "compare": "rag",
-            "data": "rag",
+            "chat": "general_chat",
             "rag": "rag"
         }
     )
 
-    # Direct Chat path
-    graph.add_edge(
-        "direct_chat",
-        END
-    )
-
     # RAG path
-    # graph.add_edge(
-    #     "rag",
-    #     "chat"
-    # )
-
-    graph.add_conditional_edges(
+    graph.add_edge(
         "rag",
-        router_context,
-        {
-            "rag_found": "chat",
-            "no_results": "direct_chat"
-        }
+        "chat"
     )
-
 
     graph.add_edge(
         "chat",
+        END
+    )
+
+    graph.add_edge(
+        "general_chat",
         END
     )
 

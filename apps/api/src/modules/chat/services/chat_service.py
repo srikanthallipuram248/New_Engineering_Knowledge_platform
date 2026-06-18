@@ -145,7 +145,8 @@ class ChatService:
 
         return {
             "answer": result["answer"],
-            "sources": sources
+            "sources": sources,
+            "intent": result["intent"]
         }
     
     

@@ -11,12 +11,11 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 )
 
 
-
 class RAGService:
 
-    SEARCH_LIMIT = 50
-    CONTEXT_LIMIT = 8
-    MAX_CONTEXT_CHARS = 15000
+    SEARCH_LIMIT = 15
+    CONTEXT_LIMIT = 10
+    MAX_CONTEXT_CHARS = 30000
 
     @staticmethod
     def build_context(results):
@@ -29,23 +28,19 @@ class RAGService:
 
         for r in top_results:
 
-            text = r["text"][:2000]
-
             context_parts.append(
                 f"""
-        FILE: {r['filename']}
+FILENAME: {r['filename']}
+DOCUMENT_ID: {r['document_id']}
 
-        {text}
-        """
+CONTENT:
+{r['text']}
+"""
             )
 
         context = "\n\n".join(
             context_parts
         )
-
-        print("=" * 80)
-        print("CONTEXT SIZE =", len(context))
-        print("=" * 80)
 
         return context[
             :RAGService.MAX_CONTEXT_CHARS
@@ -67,19 +62,35 @@ class RAGService:
             "rewritten_question"
         ]
 
-        keywords = analysis.get(
-            "keywords",
-            []
+        # results = HybridSearchService.search(
+        #     query=rewritten_question,
+        #     filters=analysis.get(
+        #         "filters",
+        #         {}
+        #     ),
+        #     limit=RAGService.SEARCH_LIMIT
+        #     #uploaded_by=uploaded_by
+        # )
+
+        search_query = " ".join(
+            analysis.get(
+                "keywords",
+                []
+            )
         )
 
-        # Always use full question for retrieval
+        if not search_query:
+            search_query = rewritten_question
 
-        search_query = rewritten_question
+        print(
+            "KEYWORDS =",
+            analysis.get("keywords")
+        )
 
-        print("QUESTION =", question)
-        print("REWRITTEN =", rewritten_question)
-        print("KEYWORDS =", keywords)
-        print("SEARCH QUERY =", search_query)
+        print(
+            "SEARCH QUERY =",
+            search_query
+        )
 
         print(
             "KEYWORDS =",
@@ -100,20 +111,6 @@ class RAGService:
             limit=RAGService.SEARCH_LIMIT
         )
 
-        print("=" * 80)
-        print("QUESTION =", question)
-        print("SEARCH QUERY =", search_query)
-        print("RESULT COUNT =", len(results))
-
-        for r in results[:10]:
-            print(
-                "FILE=",
-                r.get("filename"),
-                " SCORE=",
-                r.get("rerank_score")
-            )
-
-        print("=" * 80)
 
 
         if not results:
@@ -149,13 +146,15 @@ class RAGService:
     def retrieve(
         question: str,
         history: list = None,
-        #document_ids: list = None
+        document_ids: list = None,
+        analysis: dict = None
     ):
 
-        analysis = AnalyzeAgent.analyze(
-            question,
-            history
-        )
+        if not analysis:
+            analysis = AnalyzeAgent.analyze(
+                question,
+                history
+            )
 
         rewritten_question = analysis[
             "rewritten_question"
@@ -165,43 +164,24 @@ class RAGService:
             "filters",
             {}
         )
-        # if document_ids:
-        #     filters["document_ids"] = document_ids
+        if document_ids:
+            filters["document_ids"] = document_ids
 
-        keywords = analysis.get(
-            "keywords",
-            []
+        search_query = " ".join(
+            analysis.get(
+                "keywords",
+                []
+            )
         )
 
-        # Always use full question for retrieval
-
-        search_query = rewritten_question
-
-        print("QUESTION =", question)
-        print("REWRITTEN =", rewritten_question)
-        print("KEYWORDS =", keywords)
-        print("SEARCH QUERY =", search_query)
+        if not search_query:
+            search_query = rewritten_question
 
         results = HybridSearchService.search(
             query=search_query,
             filters=filters,
             limit=RAGService.SEARCH_LIMIT
         )
-
-        print("=" * 80)
-        print("QUESTION =", question)
-        print("SEARCH QUERY =", search_query)
-        print("RESULT COUNT =", len(results))
-
-        for r in results[:10]:
-            print(
-                "FILE=",
-                r.get("filename"),
-                " SCORE=",
-                r.get("rerank_score")
-            )
-
-        print("=" * 80)
 
         if not results:
             return {
