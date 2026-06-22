@@ -27,11 +27,18 @@ class RerankerService:
             pairs
         )
 
-        for result, score in zip(
-            results,
-            scores
-        ):
+        for result, score in zip(results, scores):
             result["rerank_score"] = float(score)
+
+        print("=" * 80)
+        print("RERANK SCORES")
+        print("=" * 80)
+
+        for r in results[:10]:
+            print(
+                r.get("filename"),
+                r.get("rerank_score")
+            )
 
         ranked = sorted(
             results,

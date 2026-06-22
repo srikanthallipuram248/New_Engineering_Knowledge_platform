@@ -76,7 +76,7 @@ class VectorStoreService:
         self,
         embedding,
         limit=20,
-        score_threshold=0.30,
+        score_threshold=0.15,
         filters=None
     ):
 

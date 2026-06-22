@@ -1,5 +1,5 @@
 from rank_bm25 import BM25Okapi
-
+import re
 
 class BM25Service:
 
@@ -13,15 +13,26 @@ class BM25Service:
         if not documents:
             return []
 
+        
+        
+
         corpus = [
-            doc["text"].split()
+            re.findall(
+                r"\w+",
+                doc["text"].lower()
+            )
             for doc in documents
         ]
 
         bm25 = BM25Okapi(corpus)
 
+        query_tokens = re.findall(
+            r"\w+",
+            query.lower()
+        )
+
         scores = bm25.get_scores(
-            query.split()
+            query_tokens
         )
 
         ranked = sorted(

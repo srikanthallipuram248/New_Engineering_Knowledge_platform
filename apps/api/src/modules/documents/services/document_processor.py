@@ -83,17 +83,19 @@ class DocumentProcessor:
 
     @staticmethod
     def _extract_pdf(path: Path) -> str:
+
         reader = PdfReader(str(path))
 
         text = ""
 
-        for page in reader.pages:
+        for page_num, page in enumerate(reader.pages, start=1):
+
             page_text = page.extract_text()
 
             if page_text:
-                for page_num, page in enumerate(reader.pages, start=1):
-                    text += f"\n--- PAGE {page_num} ---\n"
-                    text += page_text + "\n"
+
+                text += f"\n--- PAGE {page_num} ---\n"
+                text += page_text + "\n"
 
         return text
 

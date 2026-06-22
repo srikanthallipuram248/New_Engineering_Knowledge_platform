@@ -33,7 +33,8 @@ class ChatHistoryService:
         user_id,
         limit=10
     ):
-        return (
+
+        messages = (
             db.query(ChatMessage)
             .filter(
                 ChatMessage.user_id == user_id,
@@ -46,6 +47,7 @@ class ChatHistoryService:
             .all()
         )
 
+        return list(reversed(messages))
 
     # --------------------
     # Get Session messages

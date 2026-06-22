@@ -73,10 +73,7 @@ CONTENT:
             "SEARCH QUERY =",
             search_query
         )
-        print("TOTAL RESULTS =", len(results))
-        print("RESULTS =", results[:2])
         print("=" * 80)
-                
 
         results = HybridSearchService.search(
             query=search_query,
@@ -90,6 +87,11 @@ CONTENT:
         print(
             "TOTAL RESULTS =",
             len(results)
+        )
+
+        print(
+            "RESULTS =",
+            results[:2]
         )
 
         if not results:
@@ -169,6 +171,11 @@ CONTENT:
             len(results)
         )
 
+        print(
+            "RESULTS =",
+            results[:2]
+        )
+
         if not results:
 
             return {
@@ -183,6 +190,14 @@ CONTENT:
             0
         )
 
+        print("TOP 5 RESULTS")
+
+        for r in results[:5]:
+            print(
+                r.get("filename"),
+                r.get("rerank_score")
+            )
+
         print("=" * 80)
         print(
             "RETRIEVE RESULTS =",
@@ -193,6 +208,8 @@ CONTENT:
             best_score
         )
         print("=" * 80)
+
+        
 
         context = RAGService.build_context(
             results

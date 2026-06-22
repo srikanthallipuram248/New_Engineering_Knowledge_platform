@@ -9,6 +9,31 @@ from src.ai_platform.ai.agents.chat_agent import ChatAgent
 #-------------------
 
 def analyze_node(state):
+    
+    GREETINGS = [
+        "hi",
+        "hello",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+        "thanks",
+        "thank you",
+        "bye",
+        "how are you",
+        "who are you"
+    ]
+    
+    question = state["question"].lower().strip()
+
+    if len(question.split()) <= 4 and any(
+        word in question
+        for word in GREETINGS
+    ):
+        return {
+            "intent": "greeting"
+        }
+        
     analysis = AnalyzeAgent.analyze(
         state["question"],
         state.get("history")
@@ -17,28 +42,12 @@ def analyze_node(state):
     print("=" * 80)
     print("ANALYSIS RESULT =", analysis)
     print("=" * 80)
-
-    #Update for Intent router graph
-    # return {
-    #     "intent": analysis.get(
-    #         "intent",
-    #         "rag"
-    #     ),
-    #     "rewritten_question": analysis.get(
-    #         "rewritten_question",
-    #         state["question"]
-    #     ),
-    #     "keywords": analysis.get(
-    #         "keywords",
-    #         []
-    #     ),
-    #     "filters": analysis.get(
-    #         "filters",
-    #         {}
-    #     )
-    # }
     
     return {
+        "intent": analysis.get(
+            "intent",
+            "rag"
+        ),
         "rewritten_question": analysis.get(
             "rewritten_question",
             state["question"]
@@ -59,27 +68,56 @@ def analyze_node(state):
 # RAG Node
 #-------------------
 def rag_node(state):
-    # Pass the state values as the 'analysis' dict to avoid redundant analysis
+
     analysis = {
-        "rewritten_question": state.get("rewritten_question", state["question"]),
-        "keywords": state.get("keywords", []),
-        "filters": state.get("filters", {})
+        "rewritten_question": state.get(
+            "rewritten_question",
+            state["question"]
+        ),
+        "keywords": state.get(
+            "keywords",
+            []
+        ),
+        "filters": state.get(
+            "filters",
+            {}
+        )
     }
-    
+
     data = RAGService.retrieve(
         question=state["question"],
         history=state.get("history"),
         analysis=analysis
     )
 
+    
+    filtered_results = data["results"]
+
     print("=" * 80)
-    print("CONTEXT LENGTH =", len(data["context"]))
-    print("RESULT COUNT =", len(data["results"]))
+    print("TOTAL RESULTS =", len(data["results"]))
+    print("FILTERED RESULTS =", len(filtered_results))
     print("=" * 80)
 
+    # No good matches
+    if not filtered_results:
+
+        return {
+            "context": "",
+            "sources": []
+        }
+
+    # Build context only from filtered results
+    # context = "\n\n".join([
+    #     r.get("text", "")
+    #     for r in filtered_results
+    # ])
+    context = RAGService.build_context(
+        filtered_results
+    )
+
     return {
-        "context": data["context"],
-        "sources": data["results"]
+        "context": context,
+        "sources": filtered_results
     }
 
 
@@ -90,9 +128,13 @@ def rag_node(state):
 def chat_node(state):
     #New
     if not state.get("context", "").strip():
+
         return {
-            "answer": "I could not find any relevant information in the repository to answer your question.",
-            "sources": state.get("sources", [])
+            "answer": (
+                "I could not find relevant information "
+                "in the uploaded documents."
+            ),
+            "sources": []
         }
     
     print("=" * 80)
@@ -127,22 +169,11 @@ def chat_node(state):
     #         answer += f"- {filename}\n"
 
     return {
-        "answer": answer
+        "answer": answer,
+        "sources": state.get("sources", [])
     }
 
 
-#--------------------
-# General Chat Node
-#--------------------
-# def general_chat_node(state):
-#     return {
-#         "answer": (
-#             "This question is outside the uploaded documents "
-#             "and repository knowledge."
-#         ),
-#         "intent": "chat",
-#         "sources": []
-#     }
 
 
 

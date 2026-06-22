@@ -55,31 +55,12 @@ class GroqService:
             {
                 "role": "user",
                 "content": f"""
-QUESTION:
-{question}
+        QUESTION:
+        {question}
 
-CONTEXT:
-{context}
-
-RULES:
-
-1. Answer only from the provided context.
-
-2. If answer is not present in context,
-reply:
-"I don't know based on the uploaded documents."
-
-3. For tables, CSV, Excel:
-
-- Count rows
-- Calculate totals
-- Calculate averages
-- Summarize data
-
-4. Do not invent information.
-
-5. Give concise and accurate answers.
-"""
+        CONTEXT:
+        {context}
+        """
             }
         )
 

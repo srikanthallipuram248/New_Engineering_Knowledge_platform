@@ -52,11 +52,15 @@ class HybridSearchService:
         vector_results = list(
             unique_results.values()
         )
+        
+        print("=" * 80)
+        print("VECTOR RESULTS =", len(vector_results))
+        print("=" * 80)
 
         vector_results = [
             r
             for r in vector_results
-            if r.get("score", 0) > 0.45
+            if r.get("score", 0) > 0.15
         ]
 
         query_lower = query.lower()
@@ -87,6 +91,10 @@ class HybridSearchService:
             documents=vector_results,
             limit=50
         )
+        
+        print("=" * 80)
+        print("VECTOR RESULTS =", len(vector_results))
+        print("=" * 80)
 
         for r in bm25_results[:10]:
             print(
@@ -103,11 +111,28 @@ class HybridSearchService:
             top_k=min(limit, 20)
         )
 
+        print("=" * 80)
+        print("FINAL RERANKED RESULTS")
+        print("=" * 80)
+
         for r in reranked[:10]:
+
             print(
-                r.get("filename"),
+                "FILE:",
+                r.get("filename")
+            )
+
+            print(
+                "RERANK SCORE:",
                 r.get("rerank_score")
             )
+
+            print(
+                "TEXT:",
+                r.get("text", "")[:300]
+            )
+
+            print("-" * 80)
 
         if not reranked:
             return []

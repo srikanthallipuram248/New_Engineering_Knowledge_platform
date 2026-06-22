@@ -10,16 +10,6 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
 )
 
 
-# Create Router fuction for intent router graph
-# def route_intent(state):
-
-#     if state.get("intent") == "chat":
-#         return "chat"
-
-#     return "rag"
-# def route_intent(state):
-#     return "rag"
-
 
 def build_chat_graph():
 
@@ -41,52 +31,58 @@ def build_chat_graph():
         chat_node
     )
 
-    # graph.add_node(
-    #     "general_chat",
-    #     general_chat_node
-    # )
+    graph.add_node(
+        "greeting",
+        greeting_node
+    )
+    
+    graph.add_conditional_edges(
+        "analyze",
+        route_intent,
+        {
+            "greeting": "greeting",
+            "rag": "rag"
+        }
+    )
 
     # Entry Points
     graph.set_entry_point(
         "analyze"
-    )
-
-    # Intent Router
-    # graph.add_conditional_edges(
-    #     "analyze",
-    #     route_intent,
-    #     {
-    #         "chat": "general_chat",
-    #         "rag": "rag"
-    #     }
-    # )
-    
-    
-    graph.add_edge(
-        "analyze",
-        "rag"
-    )
+    )    
 
     # RAG path
     graph.add_edge(
         "rag",
         "chat"
     )
+    graph.add_edge(
+        "greeting",
+        END
+    )
 
     graph.add_edge(
         "chat",
         END
     )
-
-    # graph.add_edge(
-    #     "general_chat",
-    #     END
-    # )
+    
 
     return graph.compile()
 
+def route_intent(state):
+
+    if state.get("intent") == "greeting":
+        return "greeting"
+
+    return "rag"
 
 
-
+def greeting_node(state):
+    return {
+        "answer": (
+            "Hello! 👋\n\n"
+            "I'm your Enterprise Knowledge Copilot.\n"
+            "You can ask questions about uploaded documents, reports, source code, APIs and datasets."
+        )
+    }
 
 
