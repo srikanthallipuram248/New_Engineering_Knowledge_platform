@@ -80,8 +80,11 @@ class AnalyzeAgent:
             print("KEYWORDS =", analysis.get("keywords"))
             print("=" * 80)
             return {
-                "intent": analysis.get("intent", "rag"),
-                "rewritten_question": analysis.get("rewritten_question", question),
+                "intent": "rag",
+                "rewritten_question": analysis.get(
+                    "rewritten_question",
+                    question
+                ),
                 "keywords": analysis.get("keywords", []),
                 "filters": analysis.get("filters", {})
             }

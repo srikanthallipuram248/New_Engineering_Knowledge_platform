@@ -30,7 +30,10 @@ class ChatService:
             {
                 "question": question,
                 "history": history,
-                "uploaded_by": user.id
+                "uploaded_by": user.id,
+                # for Adding metadata
+                "db": db,
+                "user": user
             }
         )
 

@@ -1,5 +1,5 @@
 from typing import TypedDict, Optional, List
-
+from sqlalchemy.orm import Session
 
 class ChatState(TypedDict):
 
@@ -26,6 +26,12 @@ class ChatState(TypedDict):
 
     # Optional: scope RAG search to specific document IDs
     #document_ids: Optional[List[int]]
+    
+    #Metadata answer
+    metadata_answer: str
+    
+    db: Session
+    user: object
 
 
 
