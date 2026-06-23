@@ -5,8 +5,9 @@ from src.ai_platform.ai.workflows.states.chat_state import ChatState
 from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
-    chat_node
-    #general_chat_node
+    chat_node,
+    general_chat_node,
+    metadata_node
 )
 
 
@@ -36,11 +37,23 @@ def build_chat_graph():
         greeting_node
     )
     
+    graph.add_node(
+        "general_chat",
+        general_chat_node
+    )
+    
+    graph.add_node(
+        "metadata",
+        metadata_node
+    )
+    
     graph.add_conditional_edges(
         "analyze",
         route_intent,
         {
             "greeting": "greeting",
+            "chat": "general_chat",
+            "metadata": "metadata",
             "rag": "rag"
         }
     )
@@ -65,15 +78,31 @@ def build_chat_graph():
         END
     )
     
+    graph.add_edge(
+        "general_chat",
+        END
+    )
+    
+    graph.add_edge(
+        "metadata",
+        END
+    )
+    
 
     return graph.compile()
 
 def route_intent(state):
 
-    if state.get("intent") == "greeting":
-        return "greeting"
+    intent = state.get(
+        "intent",
+        "rag"
+    )
 
-    return "rag"
+    print("=" * 80)
+    print("ROUTE INTENT =", intent)
+    print("=" * 80)
+
+    return intent
 
 
 def greeting_node(state):
@@ -84,5 +113,7 @@ def greeting_node(state):
             "You can ask questions about uploaded documents, reports, source code, APIs and datasets."
         )
     }
+
+
 
 

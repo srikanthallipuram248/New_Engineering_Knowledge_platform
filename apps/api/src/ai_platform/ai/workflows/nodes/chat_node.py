@@ -1,8 +1,17 @@
+import re
 from src.ai_platform.ai.agents.analyze_agent import AnalyzeAgent
 
 from src.ai_platform.ai.rag.rag_service import RAGService
 
 from src.ai_platform.ai.agents.chat_agent import ChatAgent
+
+from groq import Groq
+from src.core.config import settings
+
+from src.ai_platform.ai.agents.metadata_agent import (
+    MetadataAgent
+)
+
 
 #-------------------
 # Analyze Node
@@ -10,7 +19,7 @@ from src.ai_platform.ai.agents.chat_agent import ChatAgent
 
 def analyze_node(state):
     
-    GREETINGS = [
+    GREETINGS = {
         "hi",
         "hello",
         "hey",
@@ -22,18 +31,55 @@ def analyze_node(state):
         "bye",
         "how are you",
         "who are you"
-    ]
+    }
     
     question = state["question"].lower().strip()
 
-    if len(question.split()) <= 4 and any(
-        word in question
-        for word in GREETINGS
+    # if question in GREETINGS:
+    #     return {
+    #         "intent": "greeting"
+    #     }
+        
+    # OR
+
+    normalized = re.sub(
+        r"[^\w\s]",
+        "",
+        question
+    ).strip()
+
+    if normalized in GREETINGS:
+        return {
+            "intent": "greeting",
+            "rewritten_question": state["question"],
+            "keywords": [],
+            "filters": {}
+        }  
+        
+    METADATA_WORDS = [
+        "file",
+        "files",
+        "filename",
+        "filenames",
+        "uploaded",
+        "upload",
+        "pdf",
+        "excel",
+        "xlsx",
+        "document count"
+    ] 
+        
+        
+    if any(
+        word in normalized
+        for word in METADATA_WORDS
     ):
         return {
-            "intent": "greeting"
+            "intent": "metadata"
         }
-        
+    
+    
+    
     analysis = AnalyzeAgent.analyze(
         state["question"],
         state.get("history")
@@ -174,7 +220,73 @@ def chat_node(state):
     }
 
 
+#-----------------------
+# General Chat Node
+# --------------------
 
+# def general_chat_node(state):
+
+#     return {
+#         "answer": (
+#             "I can answer questions about uploaded documents. "
+#             "For general conversation, please upload relevant documents."
+#         ),
+#         "sources": []
+#     }
+
+
+# OR
+
+client = Groq(
+    api_key=settings.GROQ_API_KEY
+)
+
+def general_chat_node(state):
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        temperature=0.7,
+        messages=[
+            {
+                "role": "system",
+                "content": """
+        You are a helpful AI assistant.
+
+        Answer naturally.
+
+        Be concise.
+
+        Do not mention uploaded documents unless the user asks about them.
+        """
+            },
+            {
+                "role": "user",
+                "content": state["question"]
+            }
+        ]
+    )
+
+    return {
+        "answer": response.choices[0].message.content,
+        "sources": []
+    }
+
+
+# ------------------------------
+# Metadata node
+# ----------------------------
+def metadata_node(state):
+
+    result = MetadataAgent.answer(
+        question=state["question"],
+        db=state["db"],
+        user_id=state["uploaded_by"]
+    )
+
+    return {
+        "answer": result["answer"],
+        "sources": []
+    }
 
 
 
