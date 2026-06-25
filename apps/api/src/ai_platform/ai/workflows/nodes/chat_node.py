@@ -55,7 +55,10 @@ def rag_node(state):
     data = RAGService.retrieve(
         question=state["rewritten_question"],
         history=state.get("history"),
-        document_ids=state.get("document_ids") or []
+        document_ids=state.get("document_ids") or [],
+        rewritten_question=state.get("rewritten_question"),
+        keywords=state.get("keywords"),
+        filters=state.get("filters"),
     )
     return {
         "context": data["context"],

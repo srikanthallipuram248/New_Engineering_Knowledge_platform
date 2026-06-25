@@ -98,4 +98,13 @@ def build_user_context(
         "For Mermaid diagrams, use \\n between lines and follow all Mermaid rules exactly."
     )
 
-    return "\n".join(parts)
+    context = "\n".join(parts)
+
+    # Hard cap: keep user context under ~18,000 chars (~4,500 tokens) so the
+    # total prompt (system prompt ~900 tokens + user) stays well under
+    # the Groq free-tier 12,000 TPM limit.
+    _MAX_CONTEXT_CHARS = 18_000
+    if len(context) > _MAX_CONTEXT_CHARS:
+        context = context[:_MAX_CONTEXT_CHARS] + "\n[...truncated to fit token limit...]"
+
+    return context

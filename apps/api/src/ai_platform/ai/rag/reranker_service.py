@@ -3,7 +3,7 @@ from sentence_transformers import CrossEncoder
 
 class RerankerService:
 
-    MIN_RERANK_SCORE = -5
+    MIN_RERANK_SCORE = -10
 
     model = CrossEncoder(
         "cross-encoder/ms-marco-MiniLM-L-6-v2"

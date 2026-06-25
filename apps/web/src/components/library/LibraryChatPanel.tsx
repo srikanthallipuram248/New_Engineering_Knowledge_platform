@@ -16,11 +16,13 @@ import {
   CheckSquare,
   Square,
   Check,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fadeInUp } from '@/lib/motion-presets'
-import { askChat, getChatHistory } from '@/services/api'
+import { askChat, getChatHistory, regenerateChat } from '@/services/api'
 import type {
   ChatApiResponse,
   ChatHistoryMessage,
@@ -273,6 +275,48 @@ export function LibraryChatPanel({
     const updated: ChatSession = { ...activeSession, selectedDocIds: [] }
     saveSession(updated)
     setSessions(loadSessions())
+  }
+
+  // ── Regenerate message ────────────────────────────────────────────────
+
+  async function regenerateMessage(assistantMsgId: string) {
+    const currentSession = activeSession
+    if (!currentSession || sending) return
+
+    // Find the user question that preceded this assistant message
+    const idx = currentSession.messages.findIndex((m) => m.id === assistantMsgId)
+    const userMsg = idx > 0 ? currentSession.messages.slice(0, idx).reverse().find((m) => m.role === 'user') : null
+    if (!userMsg) return
+
+    const docIdsToSend =
+      currentSession.selectedDocIds.length > 0 ? currentSession.selectedDocIds : undefined
+
+    // Replace the assistant message with a pending state
+    const withPending = currentSession.messages.map((m) =>
+      m.id === assistantMsgId ? { ...m, pending: true, content: '', sources: undefined, failed: false } : m
+    )
+    saveSession({ ...currentSession, messages: withPending, updatedAt: new Date().toISOString() })
+    setSessions(loadSessions())
+    setSending(true)
+
+    try {
+      const res: ChatApiResponse = await regenerateChat(userMsg.content, docIdsToSend)
+      const withResponse = withPending.map((m) =>
+        m.id === assistantMsgId ? { ...m, pending: false, content: res.answer, sources: res.sources } : m
+      )
+      saveSession({ ...currentSession, messages: withResponse, updatedAt: new Date().toISOString() })
+      setSessions(loadSessions())
+    } catch (err: unknown) {
+      const withError = withPending.map((m) =>
+        m.id === assistantMsgId
+          ? { ...m, pending: false, failed: true, content: err instanceof Error ? err.message : 'Request failed' }
+          : m
+      )
+      saveSession({ ...currentSession, messages: withError, updatedAt: new Date().toISOString() })
+      setSessions(loadSessions())
+    } finally {
+      setSending(false)
+    }
   }
 
   // ── Send message ──────────────────────────────────────────────────────
@@ -689,7 +733,11 @@ export function LibraryChatPanel({
                 <ul className="space-y-4">
                   {messages.map((m) => (
                     <li key={m.id}>
-                      <MessageBubble message={m} onSourceClick={onSourceClick} />
+                      <MessageBubble
+                        message={m}
+                        onSourceClick={onSourceClick}
+                        onRegenerate={m.role === 'assistant' && !m.pending ? () => regenerateMessage(m.id) : undefined}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -710,13 +758,11 @@ export function LibraryChatPanel({
                   }}
                   rows={1}
                   placeholder={
-                    docCount === 0
-                      ? 'Upload a document first to start chatting…'
-                      : selectedDocIds.length > 0
-                        ? `Ask your ${selectedDocIds.length} selected ${selectedDocIds.length === 1 ? 'document' : 'documents'}…`
-                        : 'Ask your library…'
+                    selectedDocIds.length > 0
+                      ? `Ask your ${selectedDocIds.length} selected ${selectedDocIds.length === 1 ? 'document' : 'documents'}…`
+                      : 'Ask anything…'
                   }
-                  disabled={sending || docCount === 0}
+                  disabled={sending}
                   className={cn(
                     'max-h-32 min-h-[40px] flex-1 resize-none rounded-xl bg-transparent px-3 py-2 text-sm text-foreground',
                     'placeholder:text-muted-foreground/60 focus:outline-none disabled:opacity-50',
@@ -725,7 +771,7 @@ export function LibraryChatPanel({
                 <Button
                   type="submit"
                   size="icon"
-                  disabled={!draft.trim() || sending || docCount === 0}
+                  disabled={!draft.trim() || sending}
                   aria-label="Send message"
                   className="h-9 w-9 shrink-0"
                 >
@@ -783,19 +829,32 @@ function TypingDots() {
 function MessageBubble({
   message,
   onSourceClick,
+  onRegenerate,
 }: {
   message: ChatMessage
   onSourceClick?: (documentId: number) => void
+  onRegenerate?: () => void
 }) {
   const isUser = message.role === 'user'
   const isFailed = message.failed
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
+
+  function handleThumbsDown() {
+    setFeedback('down')
+    onRegenerate?.()
+  }
+
+  function handleThumbsUp() {
+    setFeedback('up')
+  }
+
   return (
     <motion.div
       variants={fadeInUp}
       initial="hidden"
       animate="show"
       transition={{ duration: 0.22, ease: 'easeOut' }}
-      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
+      className={cn('flex flex-col', isUser ? 'items-end' : 'items-start')}
     >
       <div
         className={cn(
@@ -824,6 +883,42 @@ function MessageBubble({
           </>
         )}
       </div>
+
+      {/* Thumbs feedback — only for non-pending, non-failed assistant messages */}
+      {!isUser && !message.pending && !isFailed && onRegenerate && (
+        <div className="mt-1.5 flex items-center gap-1">
+          <button
+            onClick={handleThumbsUp}
+            title="Good response"
+            className={cn(
+              'rounded-md p-1 transition-colors',
+              feedback === 'up'
+                ? 'text-green-500'
+                : 'text-muted-foreground/40 hover:text-green-500',
+            )}
+          >
+            <ThumbsUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={handleThumbsDown}
+            title="Regenerate response"
+            className={cn(
+              'rounded-md p-1 transition-colors',
+              feedback === 'down'
+                ? 'text-destructive'
+                : 'text-muted-foreground/40 hover:text-destructive',
+            )}
+          >
+            <ThumbsDown className="h-3.5 w-3.5" />
+          </button>
+          {feedback === 'up' && (
+            <span className="text-[11px] text-green-500">Thanks!</span>
+          )}
+          {feedback === 'down' && (
+            <span className="text-[11px] text-muted-foreground">Regenerating…</span>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -867,15 +962,6 @@ function SourceCard({
   onClick?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const score = source.rerank_score ?? 0
-  const scorePct = Math.round(Math.max(0, Math.min(1, score)) * 100)
-  const scoreLabel = scorePct >= 75 ? 'High' : scorePct >= 50 ? 'Medium' : 'Low'
-  const scoreColor =
-    scorePct >= 75
-      ? 'text-emerald-400 bg-emerald-500/15 ring-emerald-500/20'
-      : scorePct >= 50
-        ? 'text-amber-300 bg-amber-500/15 ring-amber-500/20'
-        : 'text-muted-foreground bg-foreground/5 ring-foreground/10'
 
   return (
     <motion.div
@@ -903,15 +989,6 @@ function SourceCard({
             </span>
           )}
         </button>
-        <span
-          className={cn(
-            'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1',
-            scoreColor,
-          )}
-          title={`Relevance: ${scorePct}%`}
-        >
-          {scoreLabel} · {scorePct}%
-        </span>
         {onClick && (
           <button
             type="button"

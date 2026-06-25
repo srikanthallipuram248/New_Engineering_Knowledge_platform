@@ -66,10 +66,9 @@ def chat(
     #     answer=answer
     # )
 
-    #New
     response = ChatService.ask(
         question=request.question,
-        #document_ids=request.document_ids,
+        document_ids=request.document_ids,
         db=db,
         user=user
     )
@@ -134,6 +133,7 @@ def regenerate_answer(
 
     result = ChatService.ask(
         question=payload.question,
+        document_ids=payload.document_ids,
         db=db,
         user=user
     )

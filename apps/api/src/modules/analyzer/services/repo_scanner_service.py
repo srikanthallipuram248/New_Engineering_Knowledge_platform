@@ -39,10 +39,10 @@ _INDEX_EXTENSIONS: frozenset[str] = _SOURCE_EXTENSIONS | frozenset({
     ".css", ".scss", ".md", ".json", ".yml", ".yaml", ".sql",
 })
 
-_README_CHAR_LIMIT = 24_000
-_MANIFEST_CHAR_LIMIT = 2_000
-_SOURCE_CHAR_LIMIT = 1_500
-_MAX_SOURCE_FILES = 5
+_README_CHAR_LIMIT = 6_000
+_MANIFEST_CHAR_LIMIT = 1_500
+_SOURCE_CHAR_LIMIT = 1_000
+_MAX_SOURCE_FILES = 4
 
 # Caps for the full-repo indexing pass — keeps embedding generation fast
 # even on huge repos. Plenty for "explain/improve this file" style chat.

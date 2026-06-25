@@ -83,7 +83,7 @@ def build_chat_graph():
         {
             "greeting": "direct_chat",
             "help": "direct_chat",
-            "chat": "direct_chat",
+            "chat": "rag",
 
             "summarize": "rag",
             "compare": "rag",

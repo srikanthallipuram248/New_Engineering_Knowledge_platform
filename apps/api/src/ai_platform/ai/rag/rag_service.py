@@ -13,9 +13,9 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 
 class RAGService:
 
-    SEARCH_LIMIT = 100
-    CONTEXT_LIMIT = 30
-    MAX_CONTEXT_CHARS = 150000
+    SEARCH_LIMIT = 10
+    CONTEXT_LIMIT = 8
+    MAX_CONTEXT_CHARS = 12000
 
     @staticmethod
     def build_context(results):
@@ -140,55 +140,50 @@ CONTENT:
     def retrieve(
         question: str,
         history: list = None,
-        #document_ids: list = None
+        document_ids: list = None,
+        rewritten_question: str = None,
+        keywords: list = None,
+        filters: dict = None,
     ):
+        # Use pre-computed analysis from analyze_node when available so we
+        # don't make a second (redundant) Groq call here.
+        if rewritten_question is None or keywords is None:
+            analysis = AnalyzeAgent.analyze(question, history)
+            rewritten_question = analysis["rewritten_question"]
+            keywords = analysis.get("keywords", [])
+            filters = analysis.get("filters", {})
 
-        analysis = AnalyzeAgent.analyze(
-            question,
-            history
-        )
+        if filters is None:
+            filters = {}
 
-        rewritten_question = analysis[
-            "rewritten_question"
-        ]
+        scoped_filters = dict(filters)
+        if document_ids:
+            scoped_filters["document_ids"] = document_ids
 
-        filters = analysis.get(
-            "filters",
-            {}
-        )
-        # if document_ids:
-        #     filters["document_ids"] = document_ids
+        search_query = " ".join(keywords) if keywords else rewritten_question
+        queries = [question, rewritten_question] + (keywords or [])
 
-        search_query = " ".join(
-            analysis.get(
-                "keywords",
-                []
-            )
-        )
-
-        if not search_query:
-            search_query = rewritten_question
-
+        # Search within the selected documents first
         results = HybridSearchService.search(
             query=search_query,
-            filters=filters,
+            queries=queries,
+            filters=scoped_filters,
             limit=RAGService.SEARCH_LIMIT
         )
 
-        print("=" * 80)
-        print("QUESTION =", question)
-        print("SEARCH QUERY =", search_query)
-        print("RESULT COUNT =", len(results))
-
-        for r in results[:10]:
-            print(
-                "FILE=",
-                r.get("filename"),
-                " SCORE=",
-                r.get("rerank_score")
+        # If the selected docs returned nothing relevant (top BM25 score is
+        # very low or no results at all), fall back to the full knowledge base
+        # so the user still gets an answer from other indexed repos.
+        top_score = results[0].get("score", 0) if results else 0
+        if document_ids and (not results or top_score < 0.5):
+            global_results = HybridSearchService.search(
+                query=search_query,
+                queries=queries,
+                filters=filters,  # no document_ids filter
+                limit=RAGService.SEARCH_LIMIT
             )
-
-        print("=" * 80)
+            if global_results:
+                results = global_results
 
         if not results:
             return {
@@ -197,22 +192,8 @@ CONTENT:
                 "results": []
             }
 
-        best_score = results[0].get(
-            "rerank_score",
-            0
-        )
+        context = RAGService.build_context(results)
 
-        if best_score < -5:
-            return {
-                "rewritten_question": rewritten_question,
-                "context": "",
-                "results": []
-            }
-
-        context = RAGService.build_context(
-            results
-        )
-        
         return {
             "rewritten_question": rewritten_question,
             "context": context,

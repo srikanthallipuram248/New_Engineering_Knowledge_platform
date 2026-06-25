@@ -34,6 +34,15 @@ class GroqService:
             }
         ]
 
+        # Inject conversation history so the LLM can refer back to
+        # previous messages in the same session.
+        if history:
+            for msg in history:
+                role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
+                content = msg.content if hasattr(msg, "content") else msg.get("content", "")
+                if role in ("user", "assistant") and content:
+                    messages.append({"role": role, "content": content})
+
         messages.append(
             {
                 "role": "user",

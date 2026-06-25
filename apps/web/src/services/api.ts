@@ -122,6 +122,20 @@ export async function register(
 }
 
 export function logout(): void {
+  // Clear all per-user localStorage keys before removing the token so
+  // the user ID can still be read for cleanup.
+  try {
+    const token = localStorage.getItem('token')
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload?.sub) {
+        const uid = String(payload.sub)
+        localStorage.removeItem(`ekp.analyzer.state.${uid}`)
+        localStorage.removeItem(`ekp.chat.sessions.${uid}`)
+        localStorage.removeItem('ekp.chat.activeSessionId')
+      }
+    }
+  } catch { /* ignore */ }
   localStorage.removeItem('token')
   localStorage.removeItem('refresh_token')
 }
@@ -201,6 +215,17 @@ export async function askChat(question: string, documentIds?: number[]): Promise
 export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
   return apiFetch<ChatHistoryMessage[]>(`${BASE}/chat/history`, {
     headers: authHeaders(),
+  })
+}
+
+export async function regenerateChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
+  return apiFetch<ChatApiResponse>(`${BASE}/chat/regenerate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      question,
+      ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
+    }),
   })
 }
 

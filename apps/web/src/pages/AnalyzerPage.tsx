@@ -58,10 +58,25 @@ function updateGlobalState(nextState: State) {
 }
 
 export default function AnalyzerPage() {
-  const [state, setState] = useState<State>(globalState)
+  // Lazy initializer reads from localStorage with the CURRENT user's key,
+  // not from the stale module-level globalState, so switching users always
+  // shows a clean slate on the very first render.
+  const [state, setState] = useState<State>(() => {
+    try {
+      const saved = localStorage.getItem(getStorageKey())
+      if (saved) {
+        const parsed = JSON.parse(saved) as State
+        if (parsed.kind !== 'loading') {
+          globalState = parsed
+          return parsed
+        }
+      }
+    } catch { /* ignore */ }
+    globalState = { kind: 'idle' }
+    return { kind: 'idle' }
+  })
 
   useEffect(() => {
-    setState(globalState)
     const listener = (next: State) => setState(next)
     listeners.add(listener)
     return () => {

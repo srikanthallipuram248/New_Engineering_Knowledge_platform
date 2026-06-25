@@ -6,26 +6,23 @@ from src.modules.documents.services.vector_store_service import (
     VectorStoreService
 )
 
+# Shared instance — avoids reconnecting to Qdrant on every search call
+_vector_store = VectorStoreService()
+
 class SearchService:
-    
+
     @staticmethod
     def search(
         query: str,
         limit: int = 50,
         filters: dict = None
-        #uploaded_by: int = None
     ):
-        embedding = EmbeddingsService.generate(
-            query
-        )
+        embedding = EmbeddingsService.generate(query)
 
-        vector_store = VectorStoreService()
-
-        return vector_store.search(
+        return _vector_store.search(
             embedding=embedding,
             limit=limit,
             filters=filters
-            #uploaded_by=uploaded_by
         )
 
 

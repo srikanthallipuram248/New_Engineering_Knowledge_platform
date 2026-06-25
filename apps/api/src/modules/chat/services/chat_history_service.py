@@ -1,7 +1,3 @@
-from src.modules.chat.models.chat_history import (
-    ChatHistory
-)
-
 from src.modules.chat.models.chat_message import (
     ChatMessage
 )
@@ -16,16 +12,12 @@ class ChatHistoryService:
         role,
         content
     ):
-    
-        
         message = ChatMessage(
-            user_id = user_id,
-            role = role,
-            content = content
+            user_id=user_id,
+            role=role,
+            content=content
         )
-
         db.add(message)
-
         db.commit()
         return message
 
@@ -33,19 +25,18 @@ class ChatHistoryService:
     def get_recent(
         db,
         user_id,
-        limit = 10
+        limit=10
     ):
-        return (
-            db.query(ChatHistory)
-            .filter(
-                ChatHistory.user_id == user_id
-            )
-            .order_by(
-                ChatHistory.id.desc()
-            )
+        # Fetch the most recent N messages then reverse so the LLM
+        # receives them in chronological order (oldest → newest).
+        rows = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.user_id == user_id)
+            .order_by(ChatMessage.id.desc())
             .limit(limit)
             .all()
         )
+        return list(reversed(rows))
 
 
 
