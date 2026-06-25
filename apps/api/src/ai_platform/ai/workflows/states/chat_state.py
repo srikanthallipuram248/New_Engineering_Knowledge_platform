@@ -25,7 +25,22 @@ class ChatState(TypedDict):
     uploaded_by: int
 
     # Optional: scope RAG search to specific document IDs
+<<<<<<< Updated upstream
     document_ids: Optional[List[int]]
+=======
+    #document_ids: Optional[List[int]]
+    
+    #Metadata answer    
+    db: object
+    user_id: int
+    
+    #memory
+    memory: dict
+    
+    #Planner
+    plan: dict
+    action: str
+>>>>>>> Stashed changes
 
 
 

@@ -1,3 +1,4 @@
+import json
 from groq import Groq
 
 from src.core.config import settings
@@ -18,7 +19,8 @@ class GroqService:
         cls,
         question: str,
         context: str,
-        history=None
+        history=None,
+        memory=None
     ):
 
         if not context.strip():
@@ -32,10 +34,39 @@ class GroqService:
                 "role": "system",
                 "content": DOCUMENT_QA_SYSTEM_PROMPT
             }
-        ]
+        ]        
+        
+        #Memory agent
+        if memory:
 
+<<<<<<< Updated upstream
         # Inject conversation history so the LLM can refer back to
         # previous messages in the same session.
+=======
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"""
+        Working Memory
+
+        The following JSON represents the current conversation state.
+
+        Use it only to resolve references,
+        follow-up questions,
+        pronouns,
+        and conversational context.
+
+        Do NOT use it as evidence when answering.
+
+        Answers must always be grounded in the retrieved CONTEXT.
+
+        {json.dumps(memory, indent=2)}
+        """
+                }
+            )
+            
+        # Add conversation history
+>>>>>>> Stashed changes
         if history:
             for msg in history:
                 role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
@@ -80,6 +111,7 @@ in the provided context.
             max_tokens=1000
         )
 
+<<<<<<< Updated upstream
         answer = (
             response
             .choices[0]
@@ -94,3 +126,39 @@ in the provided context.
     
     
     
+=======
+            response = cls.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0,
+                max_tokens=1000
+            )
+            
+            print("=" * 80)
+            print("MEMORY")
+            print(memory)
+            print("=" * 80)
+
+            print("HISTORY =", len(history or []))
+            print("CONTEXT LENGTH =", len(context))
+
+            return (
+                response
+                .choices[0]
+                .message
+                .content
+                .strip()
+            )
+
+        except Exception as e:
+
+            print(
+                f"Groq Error: {e}"
+            )
+
+            return (
+                "I encountered an error while generating the response."
+            )
+            
+        
+>>>>>>> Stashed changes

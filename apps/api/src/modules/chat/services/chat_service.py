@@ -7,6 +7,10 @@ from src.ai_platform.ai.workflows.graph.chat_graph import (
     build_chat_graph
 )
 
+from src.ai_platform.ai.agents.memory_agent import (
+    MemoryAgent
+)
+
 
 class ChatService:
     
@@ -79,18 +83,51 @@ class ChatService:
             user_id=user.id,
             limit=10
         )
+        
+        #Memory agent
+        memory = MemoryAgent.build(
+            history
+        )
 
         graph = build_chat_graph()
+        print("=" * 80)
+        print("WORKING MEMORY")
+        print(memory)
+        print("=" * 80)
 
         result = graph.invoke(
             {
                 "question": question,
                 "history": history,
+                # memory
+                "memory": memory,
                 "uploaded_by": user.id,
+<<<<<<< Updated upstream
                 "document_ids": document_ids or []
             }
         )
 
+=======
+                # for Adding metadata
+                "db": db,
+                "user_id": user.id,
+                "user": user
+            }
+        )
+
+        print("=" * 80)
+        print("PLANNER ACTION =", result.get("action"))
+        print("PLAN =", result.get("plan"))
+        print("=" * 80)
+
+        print("=" * 80)
+        print("GRAPH RESULT KEYS =", result.keys())
+        print("ANSWER =", result.get("answer"))
+        print("INTENT =", result.get("intent"))
+        print("SOURCE COUNT =", len(result.get("sources", [])))
+        print("=" * 80)
+
+>>>>>>> Stashed changes
         seen = set()
         sources = []
 

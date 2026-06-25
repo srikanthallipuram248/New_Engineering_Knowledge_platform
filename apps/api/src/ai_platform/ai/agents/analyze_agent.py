@@ -12,6 +12,9 @@ from src.ai_platform.ai.prompts.analyze_prompt import (
     ANALYZE_SYSTEM_PROMPT
 )
 
+from src.ai_platform.ai.agents.followup_agent import (
+    FollowupAgent
+)
 
 class AnalyzeAgent:
 
@@ -240,6 +243,7 @@ class AnalyzeAgent:
     def analyze(
         cls,
         question: str,
+<<<<<<< Updated upstream
         history=None
     ):
 
@@ -307,6 +311,58 @@ class AnalyzeAgent:
                 model="llama-3.3-70b-versatile",
                 messages=messages,
                 temperature=0.0
+=======
+        history: list = None,
+        memory: dict = None
+    ):
+        
+        # Followup agent
+        question = FollowupAgent.resolve(
+            question=question,
+            history=history,
+            memory=memory
+        )
+        
+        try:           
+            # Prepare history for the prompt
+            formatted_history = []
+            if history:
+                for h in history:
+                    if isinstance(h, dict):
+                        formatted_history.append(h)
+                    elif hasattr(h, "model_dump"):
+                        formatted_history.append(h.model_dump())
+                    elif hasattr(h, "role") and hasattr(h, "content"):
+                        formatted_history.append({
+                            "role": h.role,
+                            "content": h.content
+                        })
+                    else:
+                        try:
+                            formatted_history.append(dict(h))
+                        except Exception:
+                            pass
+
+            response = cls.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                temperature=0,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ANALYZE_SYSTEM_PROMPT
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "question": question,
+                                "history": formatted_history,
+                                "memory": memory
+                            }
+                        )
+                    }
+                ]
+>>>>>>> Stashed changes
             )
 
             content = (
@@ -316,6 +372,7 @@ class AnalyzeAgent:
                 .content
             )
 
+<<<<<<< Updated upstream
             cleaned = content.strip()
 
             if cleaned.startswith("```"):
@@ -383,6 +440,23 @@ class AnalyzeAgent:
                 "intent": intent,
                 "rewritten_question": original_question,
                 "keywords": cls.generate_keywords(
+=======
+            analysis = json.loads(content)
+            print("=" * 80)
+            print("ANALYZE AGENT")
+            print("QUESTION =", question)
+            print("MEMORY =", memory)
+            print("RAW =", content)
+            print("INTENT =", analysis.get("intent"))
+            print("REWRITTEN =", analysis.get("rewritten_question"))
+            print("KEYWORDS =", analysis.get("keywords"))
+            print("FILTERS =", analysis.get("filters"))
+            print("=" * 80)
+            return {
+                "intent": "rag",
+                "rewritten_question": analysis.get(
+                    "rewritten_question",
+>>>>>>> Stashed changes
                     question
                 ),
                 "filters": {},

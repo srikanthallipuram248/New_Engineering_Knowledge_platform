@@ -62,8 +62,36 @@ def build_chat_graph():
 
     # for intent router
     graph.add_node(
+<<<<<<< Updated upstream
         "direct_chat",
         direct_chat_node
+=======
+        "greeting",
+        greeting_node
+    )
+    
+    graph.add_node(
+        "general_chat",
+        general_chat_node
+    )
+    
+    graph.add_node(
+        "metadata",
+        metadata_node
+    )
+    
+    
+    graph.add_conditional_edges(
+        "analyze",
+        route_action,
+        {
+            "greeting": "greeting",
+            "chat": "general_chat",
+            "metadata": "metadata",
+            "rag": "rag",
+            "tool": "rag"
+        }
+>>>>>>> Stashed changes
     )
 
     # Entry Points
@@ -121,7 +149,32 @@ def build_chat_graph():
 
     return graph.compile()
 
+<<<<<<< Updated upstream
 
+=======
+def route_action(state):
+
+    action = state.get(
+        "action",
+        "rag"
+    )
+
+    print("=" * 80)
+    print("PLANNER ACTION =", action)
+    print("=" * 80)
+
+    return action
+
+
+def greeting_node(state):
+    return {
+        "answer": (
+            "Hello! 👋\n\n"
+            "I'm your Enterprise Knowledge Copilot.\n"
+            "You can ask questions about uploaded documents, reports, source code, APIs and datasets."
+        )
+    }
+>>>>>>> Stashed changes
 
 
 

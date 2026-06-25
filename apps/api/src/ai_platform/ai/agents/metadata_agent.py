@@ -102,3 +102,37 @@ class MetadataAgent:
                 "Metadata information not found.",
             "sources": []
         }
+    
+    
+    @staticmethod
+    def detect(question: str):
+
+        q = question.lower()
+
+        metadata_patterns = [
+
+            "how many files",
+            "file count",
+            "document count",
+
+            "show uploaded files",
+            "list uploaded files",
+            "list files",
+            "show files",
+
+            "how many pdf",
+            "how many excel",
+            "how many csv",
+
+            "which file is pdf",
+            "which file is excel",
+            "which file is csv",
+
+            "uploaded files",
+            "uploaded documents"
+        ]
+
+        return any(
+            pattern in q
+            for pattern in metadata_patterns
+        )
