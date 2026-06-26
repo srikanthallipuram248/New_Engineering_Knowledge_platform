@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from uuid import UUID
 from src.core.database import get_db
-
-
+from src.modules.chat.models.chat_session import (
+    ChatSession
+)
 from src.modules.chat.schemas.chat_schema import (
     ChatRequest,
     ChatResponse
@@ -17,7 +18,11 @@ from src.shared.dependencies import (
     get_current_user
 )
 
-from src.modules.chat.services.chat_history_service import (
+# from src.modules.chat.services.chat_history_service import (
+#     ChatMessage
+# )
+
+from src.modules.chat.models.chat_message import (
     ChatMessage
 )
 
@@ -49,25 +54,33 @@ def chat(
     user = Depends(get_current_user)
 ):
     
+    session = (
+        db.query(ChatSession)
+        .filter(
+            ChatSession.session_uuid == request.session_id,
+            ChatSession.user_id == user.id
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid session"
+        )
+    
     ChatHistoryService.save(
         db=db,
         user_id=user.id,
+        #session_id=request.session_id,
+        session_id=session.id,
         role="user",
         content=request.question
     )
 
-    # answer = ChatService.ask(
-    #     db=db,
-    #     user=user,
-    #     question=request.question
-    # )
-
-    # return ChatResponse(
-    #     answer=answer
-    # )
-
     response = ChatService.ask(
         question=request.question,
+        session_id=session.id,
         document_ids=request.document_ids,
         db=db,
         user=user
@@ -76,35 +89,53 @@ def chat(
     ChatHistoryService.save(
         db=db,
         user_id=user.id,
+        #session_id=request.session_id,
+        session_id=session.id,
         role="assistant",
         content=response["answer"]
     )
 
     return ChatResponse(
         answer=response["answer"],
+        session_id=session.session_uuid,
         sources=response["sources"]
     )
 
     
-    
-    
-
 
 #History router
 
-@router.get("/history")
+@router.get("/history/{session_id}")
 def get_history(
+    session_id: UUID,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     
-    chats = db.query(
-        ChatMessage
-    ).filter(
-        ChatMessage.user_id == user.id
-    ).order_by(
-        ChatMessage.id.asc()
-    ).all()
+    session = (
+        db.query(ChatSession)
+        .filter(
+            ChatSession.session_uuid == session_id,
+            ChatSession.user_id == user.id
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid session"
+        )
+
+    chats = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.user_id == user.id,
+            ChatMessage.session_id == session.id
+        )
+        .order_by(ChatMessage.id.asc())
+        .all()
+    )
 
     return chats
 
@@ -113,20 +144,34 @@ def get_history(
 # ------------------------
 #  Re-Generate question and answer
 # --------------------------------
-
-@router.post(
-    "/regenerate"
-)
+@router.post("/regenerate")
 def regenerate_answer(
     payload: RegenerateRequest,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     
+
+    session = (
+        db.query(ChatSession)
+        .filter(
+            ChatSession.session_uuid == payload.session_id,
+            ChatSession.user_id == user.id
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid session"
+        )
+    
     # Save edited question
     ChatHistoryService.save(
         db=db,
         user_id=user.id,
+        session_id=session.id,
         role="user",
         content=payload.question
     )
@@ -135,6 +180,7 @@ def regenerate_answer(
         question=payload.question,
         document_ids=payload.document_ids,
         db=db,
+        session_id=session.id,
         user=user
     )
 
@@ -142,6 +188,7 @@ def regenerate_answer(
     ChatHistoryService.save(
         db=db,
         user_id=user.id,
+        session_id=session.id,
         role="assistant",
         content=result["answer"]
     )

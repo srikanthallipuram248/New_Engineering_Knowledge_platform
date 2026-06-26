@@ -11,6 +11,7 @@ import {
   deleteDocument,
   listDocuments,
   uploadDocument,
+  createChatSession,
 } from '@/services/api'
 import type { LibraryDocument, UploadResponse } from '@/services/api'
 import { FileDropZone } from '@/components/library/FileDropZone'
@@ -70,18 +71,40 @@ export default function LibraryPage() {
   // session scoped to that repo's document so the user lands in a
   // focused thread instead of "all docs".
   useEffect(() => {
-    const askDocumentId = (location.state as { askDocumentId?: number } | null)
-      ?.askDocumentId
+    const askDocumentId = (
+      location.state as { askDocumentId?: number } | null
+    )?.askDocumentId
+
     if (askDocumentId == null || loading) return
 
-    const docNames = docs.map((d) => d.file_name)
-    const session = createNewSession(docNames, [askDocumentId])
-    saveSession(session)
-    setActiveSessionId(session.id)
-    setPendingFocusSessionId(session.id)
+    const createRepoSession = async () => {
+      try {
+        const docNames = docs.map((d) => d.file_name)
 
-    // Clear the nav state so this doesn't refire on remount/back-nav.
-    navigate(location.pathname, { replace: true, state: null })
+        const backendSession = await createChatSession("New Chat")
+
+        const session = createNewSession(
+          backendSession.session_uuid,
+          docNames,
+          [askDocumentId],
+        )
+
+        saveSession(session)
+
+        setActiveSessionId(session.id)
+        setPendingFocusSessionId(session.id)
+
+        navigate(location.pathname, {
+          replace: true,
+          state: null,
+        })
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    void createRepoSession()
+
   }, [location.state, location.pathname, loading, docs, navigate])
 
   const updateUpload = useCallback(

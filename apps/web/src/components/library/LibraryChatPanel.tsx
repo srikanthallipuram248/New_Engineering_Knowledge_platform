@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
@@ -22,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fadeInUp } from '@/lib/motion-presets'
-import { askChat, getChatHistory, regenerateChat } from '@/services/api'
+import { askChat, getChatHistory, regenerateChat, createChatSession } from '@/services/api'
 import type {
   ChatApiResponse,
   ChatHistoryMessage,
@@ -101,42 +102,54 @@ export function LibraryChatPanel({
   // Selected doc IDs for this session (empty = all docs)
   const selectedDocIds = activeSession?.selectedDocIds ?? []
 
-  // ── Load server history once on mount ──────────────────────────────────
+  // // ── Load server history once on mount ──────────────────────────────────
+  // useEffect(() => {
+  //   let cancelled = false
+  //   ;(async () => {
+  //     try {
+  //       //const history = await getChatHistory()
+  //       if (!activeSession) return
+
+  //         const history = await getChatHistory(
+  //           activeSession.session_uuid
+  //         )
+          
+  //       if (cancelled) return
+  //       if (history.length > 0) {
+  //         const existingSessions = loadSessions()
+  //         const alreadyImported = existingSessions.some((s) => s.id === 'server-history')
+  //         if (!alreadyImported) {
+  //           const mapped: ChatMessage[] = history.map((h: ChatHistoryMessage) => ({
+  //             id: `srv-${h.id}`,
+  //             role: h.role,
+  //             content: h.content,
+  //           }))
+  //           const serverSession: ChatSession = {
+  //             id: 'server-history',
+  //             title: 'Previous conversation',
+  //             createdAt: history[0]?.created_at ?? new Date().toISOString(),
+  //             updatedAt: history[history.length - 1]?.created_at ?? new Date().toISOString(),
+  //             messages: mapped,
+  //             docSnapshot: [],
+  //             selectedDocIds: [],
+  //           }
+  //           saveSession(serverSession)
+  //           setSessions(loadSessions())
+  //         }
+  //       }
+  //     } catch {
+  //       // silently start fresh
+  //     } finally {
+  //       if (!cancelled) setHistoryLoaded(true)
+  //     }
+  //   })()
+  //   return () => { cancelled = true }
+  // }, [])
+
+  // Chat history is now loaded from the session APIs.
+  // No initial history import is required.
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const history = await getChatHistory()
-        if (cancelled) return
-        if (history.length > 0) {
-          const existingSessions = loadSessions()
-          const alreadyImported = existingSessions.some((s) => s.id === 'server-history')
-          if (!alreadyImported) {
-            const mapped: ChatMessage[] = history.map((h: ChatHistoryMessage) => ({
-              id: `srv-${h.id}`,
-              role: h.role,
-              content: h.content,
-            }))
-            const serverSession: ChatSession = {
-              id: 'server-history',
-              title: 'Previous conversation',
-              createdAt: history[0]?.created_at ?? new Date().toISOString(),
-              updatedAt: history[history.length - 1]?.created_at ?? new Date().toISOString(),
-              messages: mapped,
-              docSnapshot: [],
-              selectedDocIds: [],
-            }
-            saveSession(serverSession)
-            setSessions(loadSessions())
-          }
-        }
-      } catch {
-        // silently start fresh
-      } finally {
-        if (!cancelled) setHistoryLoaded(true)
-      }
-    })()
-    return () => { cancelled = true }
+    setHistoryLoaded(true)
   }, [])
 
   // ── Pick up sessions created outside this panel (e.g. "Ask about this
@@ -176,12 +189,12 @@ export function LibraryChatPanel({
   }
 
   /** Show the choosing dialog if there are files in the library, else open new session immediately. */
-  function requestNewChat() {
+  async function requestNewChat() {
     if (activeSession && activeSession.messages.length === 0) {
       return
     }
     if (docCount === 0) {
-      startNewChat([])
+      await startNewChat([])
       return
     }
     setNewChatDialog('choosing')
@@ -192,11 +205,11 @@ export function LibraryChatPanel({
     if (onClearDocs) {
       await onClearDocs()
     }
-    startNewChat([])
+    await startNewChat([])
   }
 
   /** Create & activate a new session. Pass selectedDocIds to scope context. */
-  function startNewChat(newSelectedDocIds: number[]) {
+  async function startNewChat(newSelectedDocIds: number[]) {
     if (activeSession) saveSession(activeSession)
 
     // If there is already an empty session, reuse it instead of creating a duplicate
@@ -220,7 +233,19 @@ export function LibraryChatPanel({
       return
     }
 
-    const newSession = createNewSession(docNames, newSelectedDocIds)
+  // const newSession = createNewSession(docNames, newSelectedDocIds)
+  //   saveSession(newSession)
+  //   setActiveSessionId(newSession.id)
+  //   setActiveSessionIdState(newSession.id)
+
+    const backendSession = await createChatSession('New Chat')
+
+    const newSession = createNewSession(
+      backendSession.session_uuid,
+      docNames,
+      newSelectedDocIds,
+    )
+
     saveSession(newSession)
     setActiveSessionId(newSession.id)
     setActiveSessionIdState(newSession.id)
@@ -300,7 +325,12 @@ export function LibraryChatPanel({
     setSending(true)
 
     try {
-      const res: ChatApiResponse = await regenerateChat(userMsg.content, docIdsToSend)
+      //const res: ChatApiResponse = await regenerateChat(userMsg.content, docIdsToSend)
+      const res: ChatApiResponse = await regenerateChat(
+          userMsg.content,
+          currentSession.session_uuid,
+          docIdsToSend,
+      )
       const withResponse = withPending.map((m) =>
         m.id === assistantMsgId ? { ...m, pending: false, content: res.answer, sources: res.sources } : m
       )
@@ -326,11 +356,28 @@ export function LibraryChatPanel({
     if (!content || sending) return
 
     let currentSession = activeSession
+    // if (!currentSession) {
+    //   currentSession = createNewSession(docNames, [])
+    //   saveSession(currentSession)
+    //   setActiveSessionId(currentSession.id)
+    //   setActiveSessionIdState(currentSession.id)
+    //   setSessions(loadSessions())
+    // }
     if (!currentSession) {
-      currentSession = createNewSession(docNames, [])
+
+      const backendSession = await createChatSession('New Chat')
+
+      currentSession = createNewSession(
+        backendSession.session_uuid,
+        docNames,
+        []
+      )
+
       saveSession(currentSession)
+
       setActiveSessionId(currentSession.id)
       setActiveSessionIdState(currentSession.id)
+
       setSessions(loadSessions())
     }
 
@@ -358,7 +405,13 @@ export function LibraryChatPanel({
     setSending(true)
 
     try {
-      const res: ChatApiResponse = await askChat(content, docIdsToSend)
+      // const res: ChatApiResponse = await askChat(content, docIdsToSend)
+      const res: ChatApiResponse = await askChat(
+        content,
+        //currentSession.id,
+        currentSession.session_uuid,
+        docIdsToSend,
+      )
       const withResponse = withPending.map((msg) =>
         msg.id === pendingMsg.id
           ? { ...msg, pending: false, content: res.answer, sources: res.sources }

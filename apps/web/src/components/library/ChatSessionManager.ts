@@ -26,16 +26,35 @@ export interface SessionSource {
   snippet: string
 }
 
+// export interface ChatSession {
+//   id: string
+//   /** Derived from first user message, or "New chat" */
+//   title: string
+//   createdAt: string
+//   updatedAt: string
+//   messages: SessionMessage[]
+//   /** Names of library documents at the time this session was created */
+//   docSnapshot: string[]
+//   /** IDs of documents scoped to this session for RAG (all docs if empty) */
+//   selectedDocIds: number[]
+// }
 export interface ChatSession {
+
+  // Local frontend ID
   id: string
-  /** Derived from first user message, or "New chat" */
+
+  // Backend session UUID
+  session_uuid: string
+
   title: string
+
   createdAt: string
   updatedAt: string
+
   messages: SessionMessage[]
-  /** Names of library documents at the time this session was created */
+
   docSnapshot: string[]
-  /** IDs of documents scoped to this session for RAG (all docs if empty) */
+
   selectedDocIds: number[]
 }
 
@@ -109,17 +128,42 @@ export function deleteSession(id: string): void {
   }
 }
 
+// export function createNewSession(
+//   docSnapshot: string[] = [],
+//   selectedDocIds: number[] = [],
+// ): ChatSession {
+//   return {
+//     id: crypto.randomUUID(),
+//     title: 'New chat',
+//     createdAt: new Date().toISOString(),
+//     updatedAt: new Date().toISOString(),
+//     messages: [],
+//     docSnapshot,
+//     selectedDocIds,
+//   }
+// }
+// New code
 export function createNewSession(
+  //sessionId: string,
+  session_uuid: string,
   docSnapshot: string[] = [],
   selectedDocIds: number[] = [],
 ): ChatSession {
   return {
     id: crypto.randomUUID(),
+
+    session_uuid,
+
     title: 'New chat',
+
     createdAt: new Date().toISOString(),
+
     updatedAt: new Date().toISOString(),
+
     messages: [],
+
     docSnapshot,
+
     selectedDocIds,
   }
 }

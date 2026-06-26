@@ -188,6 +188,13 @@ export interface ChatApiResponse {
   sources: ChatSource[]
 }
 
+export interface ChatSessionResponse {
+  id: number
+  session_uuid: string
+  title: string
+  created_at: string
+}
+
 /**
  * History row as returned by GET /chat/history. Sources are NOT
  * persisted (they're returned inline on POST /chat) — history rows
@@ -201,29 +208,74 @@ export interface ChatHistoryMessage {
   created_at: string
 }
 
-export async function askChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
+
+export async function createChatSession(
+  title = 'New Chat',
+): Promise<ChatSessionResponse> {
+  return apiFetch<ChatSessionResponse>(`${BASE}/chat-sessions`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      title,
+    }),
+  })
+}
+
+
+
+// export async function askChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
+//   return apiFetch<ChatApiResponse>(`${BASE}/chat`, {
+//     method: 'POST',
+//     headers: authHeaders(),
+//     body: JSON.stringify({
+//       question,
+//       ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
+//     }),
+//   })
+// }
+
+// New code
+export async function askChat(
+  question: string,
+  sessionId: string,
+  documentIds?: number[],
+): Promise<ChatApiResponse> {
   return apiFetch<ChatApiResponse>(`${BASE}/chat`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
       question,
-      ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
+      session_id: sessionId,
+      ...(documentIds && documentIds.length > 0
+        ? { document_ids: documentIds }
+        : {}),
     }),
   })
 }
 
-export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
-  return apiFetch<ChatHistoryMessage[]>(`${BASE}/chat/history`, {
-    headers: authHeaders(),
-  })
+// export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
+//   return apiFetch<ChatHistoryMessage[]>(`${BASE}/chat/history`, {
+//     headers: authHeaders(),
+//   })
+// }
+export async function getChatHistory(
+  sessionId: string,
+): Promise<ChatHistoryMessage[]> {
+  return apiFetch<ChatHistoryMessage[]>(
+    `${BASE}/chat/history/${sessionId}`,
+    {
+      headers: authHeaders(),
+    },
+  )
 }
 
-export async function regenerateChat(question: string, documentIds?: number[]): Promise<ChatApiResponse> {
+export async function regenerateChat(question: string, sessionId: string, documentIds?: number[]): Promise<ChatApiResponse> {
   return apiFetch<ChatApiResponse>(`${BASE}/chat/regenerate`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
       question,
+      session_id: sessionId,
       ...(documentIds && documentIds.length > 0 ? { document_ids: documentIds } : {}),
     }),
   })
