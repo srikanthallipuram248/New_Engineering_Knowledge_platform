@@ -47,16 +47,16 @@ class ChatSessionService:
     # ---------------------
 
     @staticmethod
-    def get_by_id(
+    def get_by_uuid(
         db,
-        session_id,
+        session_uuid,
         user_id
     ):
         
         return (
             db.query(ChatSession)
             .filter(
-                ChatSession.id == session_id,
+                ChatSession.session_uuid == session_uuid,
                 ChatSession.user_id == user_id
             )
             .first()
@@ -79,11 +79,17 @@ class ChatSessionService:
         session = (
             db.query(ChatSession)
             .filter(
-                ChatSession.id == session_id,
+                ChatSession.session_uuid == session_id,
                 ChatSession.user_id == user_id
             )
             .first()
         )
+        # Optional
+        # session = ChatSessionService.get_by_uuid(
+        #     db=db,
+        #     session_uuid=session_uuid,
+        #     user_id=user_id
+        # )
         
         if not session:
             return False
@@ -109,7 +115,7 @@ class ChatSessionService:
         session = (
             db.query(ChatSession)
             .filter(
-                ChatSession.id == session_id,
+                ChatSession.session_uuid == session_id,
                 ChatSession.user_id == user_id
             )
             .first()
@@ -124,6 +130,31 @@ class ChatSessionService:
         db.refresh(session)
 
         return session
+
+    # ----------------------
+    # get session messages (supporter)
+    #------------------------
+
+    @staticmethod
+    def get_internal_session_id(
+        db,
+        session_uuid,
+        user_id
+    ):
+
+        session = (
+            db.query(ChatSession)
+            .filter(
+                ChatSession.session_uuid == session_uuid,
+                ChatSession.user_id == user_id
+            )
+            .first()
+        )
+
+        if not session:
+            return None
+
+        return session.id 
 
 
 

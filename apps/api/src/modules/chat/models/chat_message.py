@@ -25,20 +25,29 @@ class ChatMessage(Base):
 
     user_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("users.id")
+        ForeignKey("users.id"),
+        nullable=False
     )
 
     role: Mapped[str] = mapped_column(
-        Text
+        Text,
+        nullable=False
     )
 
     content: Mapped[str] = mapped_column(
-        Text
+        Text,
+        nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
+        nullable=False
+    )
+
+    session_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("chat_session.id"),
         nullable=False
     )
 

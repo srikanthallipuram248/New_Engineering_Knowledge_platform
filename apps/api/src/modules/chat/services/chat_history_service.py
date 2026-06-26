@@ -9,11 +9,13 @@ class ChatHistoryService:
     def save(
         db,
         user_id,
+        session_id,
         role,
         content
     ):
         message = ChatMessage(
             user_id=user_id,
+            session_id=session_id,
             role=role,
             content=content
         )
@@ -24,6 +26,7 @@ class ChatHistoryService:
     @staticmethod
     def get_recent(
         db,
+        session_id,
         user_id,
         limit=10
     ):
@@ -31,7 +34,10 @@ class ChatHistoryService:
         # receives them in chronological order (oldest → newest).
         rows = (
             db.query(ChatMessage)
-            .filter(ChatMessage.user_id == user_id)
+            .filter(
+                ChatMessage.user_id == user_id,
+                ChatMessage.session_id == session_id
+            )
             .order_by(ChatMessage.id.desc())
             .limit(limit)
             .all()

@@ -89,7 +89,6 @@ class ChatService:
         
         #Memory agent
         memory = MemoryAgent.build(
-            question=question,
             history=history
         )
 

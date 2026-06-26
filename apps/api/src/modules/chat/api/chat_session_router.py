@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends
-
+from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
 from sqlalchemy.orm import Session
 
 from src.core.database import get_db
@@ -10,11 +10,11 @@ from src.modules.chat.services.chat_session_service import ChatSessionService
 
 from src.modules.chat.schemas.chat_session_schema import (
     CreateSessionRequest,
-    UpdateSessionRequest
+    UpdateSessionRequest,
+    SessionResponse
 )
 
 from src.modules.chat.services.chat_history_service import ChatHistoryService
-
 
 
 router = APIRouter(
@@ -22,13 +22,16 @@ router = APIRouter(
     tags=["Chat Session"]
 )
 
-@router.post("")
+@router.post(
+    "",
+    response_model=SessionResponse
+)
 def create_session(
     payload: CreateSessionRequest,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    
+
     session = ChatSessionService.create(
         db=db,
         user_id=user.id,
@@ -60,21 +63,23 @@ def get_session(
 
 @router.get("/{session_id}")
 def get_session(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     
-    session = ChatSessionService.get_by_id(
+    session = ChatSessionService.get_by_uuid(
         db=db,
-        session_id=session_id,
+        #session_id=session_id,
+        session_uuid=session_id,
         user_id=user.id
     )
     
     if not session:
-        return {
-            "message": "Session not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
         
     return session
 
@@ -85,7 +90,7 @@ def get_session(
 # -------------------
 @router.delete("/{session_id}")
 def delete_session(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
@@ -97,9 +102,10 @@ def delete_session(
     )
     
     if not deleted:
-        return {
-            "message": "Session not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
         
     return {
         "message": "Session deleted"
@@ -113,15 +119,27 @@ def delete_session(
 # -------------------------
 @router.get("/{session_id}/messages")
 def get_session_messages(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     
+    internal_session_id = ChatSessionService.get_internal_session_id(
+        db=db,
+        session_uuid=session_id,
+        user_id=user.id
+    )
+
+    if not internal_session_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+
     messages = (
         ChatHistoryService.get_session_messages(
             db=db,
-            session_id=session_id
+            session_id=internal_session_id
         )
     )
 
@@ -134,7 +152,7 @@ def get_session_messages(
 
 @router.put("/{session_id}")
 def update_session_title(
-    session_id: int,
+    session_id: UUID,
     payload: UpdateSessionRequest,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
@@ -148,9 +166,10 @@ def update_session_title(
     )
 
     if not session:
-        return {
-            "message": "Session not found"
-        }
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
 
     return session
 
