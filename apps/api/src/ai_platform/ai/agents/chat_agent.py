@@ -8,13 +8,15 @@ class ChatAgent:
     def answer(
         question: str,
         context: str,
-        history = None
+        history = None,
+        memory=None
     ):
         
         return GroqService.generate(
             question=question,
             context=context,
-            history=history
+            history=history,
+            memory=memory
         )
 
 

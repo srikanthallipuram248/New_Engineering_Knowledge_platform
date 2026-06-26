@@ -12,12 +12,17 @@ from src.ai_platform.ai.prompts.analyze_prompt import (
     ANALYZE_SYSTEM_PROMPT
 )
 
+from src.ai_platform.ai.agents.followup_agent import (
+    FollowupAgent
+)
 
 class AnalyzeAgent:
 
     client = Groq(
         api_key=settings.GROQ_API_KEY
     )
+    
+    MAX_HISTORY = 5
 
     FOLLOWUP_WORDS = {
         "it",
@@ -135,7 +140,7 @@ class AnalyzeAgent:
             "show capabilities",
             "show commands"
         }:
-            return "help"
+            return "chat"
 
         # Summarize
         if any(
@@ -145,7 +150,7 @@ class AnalyzeAgent:
                 "summary"
             ]
         ):
-            return "summarize"
+            return "rag"
 
         # Compare
         if any(
@@ -157,9 +162,10 @@ class AnalyzeAgent:
                 "vs"
             ]
         ):
-            return "compare"
+            return "rag"
+        
         if cls.is_data_question(q):
-            return "data"
+            return "rag"
 
         # Everything else
         return "rag"
@@ -200,7 +206,8 @@ class AnalyzeAgent:
     ):
 
         filename_match = re.search(
-            r'([A-Za-z0-9_\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
+            #r'([A-Za-z0-9_\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
+            r'([\w\s.\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
             original_question,
             re.IGNORECASE
         )
@@ -240,7 +247,8 @@ class AnalyzeAgent:
     def analyze(
         cls,
         question: str,
-        history=None
+        history=None,
+        memory=None
     ):
 
         original_question = question
@@ -249,10 +257,24 @@ class AnalyzeAgent:
             original_question
         )
 
+        # question = normalize_query(question)
+
+        # use_history = cls.is_followup(
+        #     question
+        # )
+        
+        
+        #Better version
         question = normalize_query(question)
 
-        use_history = cls.is_followup(
-            question
+        question = FollowupAgent.resolve(
+            question=question,
+            history=history,
+            memory=memory
+        )
+
+        use_history = (
+            question != original_question
         )
 
         regex_filters = cls.extract_filename_filter(
@@ -264,7 +286,8 @@ class AnalyzeAgent:
 
             return {
                 "intent": intent,
-                "rewritten_question": original_question,
+                #"rewritten_question": original_question,
+                "rewritten_question": question,
                 "keywords": cls.generate_keywords(
                     question
                 ),
@@ -284,8 +307,21 @@ class AnalyzeAgent:
                 "content": ANALYZE_SYSTEM_PROMPT
             }
         ]
+        
+        if memory:
 
-        for msg in (history or [])[-5:]:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"""
+        Working Memory
+
+        {json.dumps(memory, indent=2)}
+        """
+                }
+            )
+
+        for msg in (history or [])[-cls.MAX_HISTORY:]:
 
             messages.append(
                 {
@@ -378,7 +414,8 @@ class AnalyzeAgent:
                     original_question
                 )
 
-        except Exception:
+        except Exception as e:
+            print(f"AnalyzeAgent Error: {e}")
             result = {
                 "intent": intent,
                 "rewritten_question": original_question,
@@ -386,7 +423,13 @@ class AnalyzeAgent:
                     question
                 ),
                 "filters": {},
-                "needs_rag": True
+                # "needs_rag": True
+                "needs_rag": intent in [
+                    "rag",
+                    "data",
+                    "compare",
+                    "summarize"
+                ]
             }
 
         llm_filters = result.get(

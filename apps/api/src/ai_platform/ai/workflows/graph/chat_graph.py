@@ -12,10 +12,15 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
 
 
 # Create Router fuction for intent router graph
-def route_intent(state):
+# def route_intent(state):
+#     return state.get(
+#         "intent",
+#         "rag"
+#     )
 
+def route_action(state):
     return state.get(
-        "intent",
+        "action",
         "rag"
     )
 
@@ -79,16 +84,12 @@ def build_chat_graph():
     # Intent Router
     graph.add_conditional_edges(
         "analyze",
-        route_intent,
+        route_action,
         {
             "greeting": "direct_chat",
-            "help": "direct_chat",
-            "chat": "rag",
-
-            "summarize": "rag",
-            "compare": "rag",
-            "data": "rag",
-            "rag": "rag"
+            "chat": "direct_chat",
+            "rag": "rag",
+            "metadata": "direct_chat"
         }
     )
 
@@ -98,11 +99,6 @@ def build_chat_graph():
         END
     )
 
-    # RAG path
-    # graph.add_edge(
-    #     "rag",
-    #     "chat"
-    # )
 
     graph.add_conditional_edges(
         "rag",
@@ -120,7 +116,6 @@ def build_chat_graph():
     )
 
     return graph.compile()
-
 
 
 

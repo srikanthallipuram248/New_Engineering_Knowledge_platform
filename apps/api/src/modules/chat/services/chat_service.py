@@ -1,3 +1,4 @@
+import json
 from src.modules.chat.services.chat_history_service import (
     ChatHistoryService
 )
@@ -5,6 +6,10 @@ from src.modules.chat.services.chat_history_service import (
 
 from src.ai_platform.ai.workflows.graph.chat_graph import (
     build_chat_graph
+)
+
+from src.ai_platform.ai.agents.memory_agent import (
+    MemoryAgent
 )
 
 
@@ -71,21 +76,41 @@ class ChatService:
     def ask(
         question,
         db,
+        session_id,
         user,
         document_ids=None
     ):
         history = ChatHistoryService.get_recent(
             db=db,
+            session_id=session_id,
             user_id=user.id,
             limit=10
         )
+        
+        #Memory agent
+        memory = MemoryAgent.build(
+            question=question,
+            history=history
+        )
 
         graph = build_chat_graph()
+        print("=" * 80)
+        print("WORKING MEMORY")
+        print(json.dumps(
+            memory,
+            indent=2,
+            default=str
+        ))
+        print("=" * 80)
 
         result = graph.invoke(
             {
                 "question": question,
                 "history": history,
+                # memory
+                "memory": memory,
+                "db": db,
+                "user_id": user.id,
                 "uploaded_by": user.id,
                 "document_ids": document_ids or []
             }
@@ -142,9 +167,27 @@ class ChatService:
         
         
 
+        # return {
+        #     "answer": result["answer"],
+        #     "sources": sources
+        # }
         return {
-            "answer": result["answer"],
-            "sources": sources
+            "answer": result.get(
+                "answer",
+                ""
+            ),
+
+            "sources": sources,
+
+            "intent": result.get(
+                "intent",
+                "rag"
+            ),
+
+            "action": result.get(
+                "action",
+                "rag"
+            )
         }
     
     
