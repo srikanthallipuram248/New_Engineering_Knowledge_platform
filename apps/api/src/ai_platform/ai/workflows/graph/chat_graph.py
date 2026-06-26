@@ -12,10 +12,15 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
 
 
 # Create Router fuction for intent router graph
-def route_intent(state):
+# def route_intent(state):
+#     return state.get(
+#         "intent",
+#         "rag"
+#     )
 
+def route_action(state):
     return state.get(
-        "intent",
+        "action",
         "rag"
     )
 
@@ -62,36 +67,8 @@ def build_chat_graph():
 
     # for intent router
     graph.add_node(
-<<<<<<< Updated upstream
         "direct_chat",
         direct_chat_node
-=======
-        "greeting",
-        greeting_node
-    )
-    
-    graph.add_node(
-        "general_chat",
-        general_chat_node
-    )
-    
-    graph.add_node(
-        "metadata",
-        metadata_node
-    )
-    
-    
-    graph.add_conditional_edges(
-        "analyze",
-        route_action,
-        {
-            "greeting": "greeting",
-            "chat": "general_chat",
-            "metadata": "metadata",
-            "rag": "rag",
-            "tool": "rag"
-        }
->>>>>>> Stashed changes
     )
 
     # Entry Points
@@ -107,16 +84,12 @@ def build_chat_graph():
     # Intent Router
     graph.add_conditional_edges(
         "analyze",
-        route_intent,
+        route_action,
         {
             "greeting": "direct_chat",
-            "help": "direct_chat",
-            "chat": "rag",
-
-            "summarize": "rag",
-            "compare": "rag",
-            "data": "rag",
-            "rag": "rag"
+            "chat": "direct_chat",
+            "rag": "rag",
+            "metadata": "direct_chat"
         }
     )
 
@@ -126,11 +99,6 @@ def build_chat_graph():
         END
     )
 
-    # RAG path
-    # graph.add_edge(
-    #     "rag",
-    #     "chat"
-    # )
 
     graph.add_conditional_edges(
         "rag",
@@ -149,32 +117,6 @@ def build_chat_graph():
 
     return graph.compile()
 
-<<<<<<< Updated upstream
-
-=======
-def route_action(state):
-
-    action = state.get(
-        "action",
-        "rag"
-    )
-
-    print("=" * 80)
-    print("PLANNER ACTION =", action)
-    print("=" * 80)
-
-    return action
-
-
-def greeting_node(state):
-    return {
-        "answer": (
-            "Hello! 👋\n\n"
-            "I'm your Enterprise Knowledge Copilot.\n"
-            "You can ask questions about uploaded documents, reports, source code, APIs and datasets."
-        )
-    }
->>>>>>> Stashed changes
 
 
 

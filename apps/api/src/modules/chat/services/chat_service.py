@@ -1,3 +1,4 @@
+import json
 from src.modules.chat.services.chat_history_service import (
     ChatHistoryService
 )
@@ -75,24 +76,31 @@ class ChatService:
     def ask(
         question,
         db,
+        session_id,
         user,
         document_ids=None
     ):
         history = ChatHistoryService.get_recent(
             db=db,
+            session_id=session_id,
             user_id=user.id,
             limit=10
         )
         
         #Memory agent
         memory = MemoryAgent.build(
-            history
+            question=question,
+            history=history
         )
 
         graph = build_chat_graph()
         print("=" * 80)
         print("WORKING MEMORY")
-        print(memory)
+        print(json.dumps(
+            memory,
+            indent=2,
+            default=str
+        ))
         print("=" * 80)
 
         result = graph.invoke(
@@ -101,33 +109,13 @@ class ChatService:
                 "history": history,
                 # memory
                 "memory": memory,
+                "db": db,
+                "user_id": user.id,
                 "uploaded_by": user.id,
-<<<<<<< Updated upstream
                 "document_ids": document_ids or []
             }
         )
 
-=======
-                # for Adding metadata
-                "db": db,
-                "user_id": user.id,
-                "user": user
-            }
-        )
-
-        print("=" * 80)
-        print("PLANNER ACTION =", result.get("action"))
-        print("PLAN =", result.get("plan"))
-        print("=" * 80)
-
-        print("=" * 80)
-        print("GRAPH RESULT KEYS =", result.keys())
-        print("ANSWER =", result.get("answer"))
-        print("INTENT =", result.get("intent"))
-        print("SOURCE COUNT =", len(result.get("sources", [])))
-        print("=" * 80)
-
->>>>>>> Stashed changes
         seen = set()
         sources = []
 
@@ -179,9 +167,27 @@ class ChatService:
         
         
 
+        # return {
+        #     "answer": result["answer"],
+        #     "sources": sources
+        # }
         return {
-            "answer": result["answer"],
-            "sources": sources
+            "answer": result.get(
+                "answer",
+                ""
+            ),
+
+            "sources": sources,
+
+            "intent": result.get(
+                "intent",
+                "rag"
+            ),
+
+            "action": result.get(
+                "action",
+                "rag"
+            )
         }
     
     

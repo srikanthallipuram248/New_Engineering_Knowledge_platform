@@ -2,8 +2,6 @@ from src.ai_platform.ai.agents.analyze_agent import AnalyzeAgent
 
 from src.ai_platform.ai.rag.rag_service import RAGService
 
-from src.ai_platform.ai.llms.groq_service import GroqService
-
 from src.ai_platform.ai.agents.chat_agent import ChatAgent
 
 from src.ai_platform.ai.agents.direct_chat_agent import (
@@ -21,56 +19,6 @@ from src.ai_platform.ai.agents.planner_agent import (
 #-------------------
 
 def analyze_node(state):
-<<<<<<< Updated upstream
-=======
-    
-    GREETINGS = {
-        "hi",
-        "hello",
-        "hey",
-        "good morning",
-        "good afternoon",
-        "good evening",
-        "thanks",
-        "thank you",
-        "bye",
-        "how are you",
-        "who are you"
-    }
-    
-    question = state["question"].lower().strip()
-
-    # if question in GREETINGS:
-    #     return {
-    #         "intent": "greeting"
-    #     }
-        
-    # OR
-
-    normalized = re.sub(
-        r"[^\w\s]",
-        "",
-        question
-    ).strip()
-
-    if normalized in GREETINGS:
-        return {
-            "intent": "greeting",
-            "rewritten_question": state["question"],
-            "keywords": [],
-            "filters": {}
-        }  
-        
-    
-    if MetadataAgent.detect(
-        state["question"]
-    ):
-        return {
-            "intent": "metadata"
-        }
-    
-    
->>>>>>> Stashed changes
     analysis = AnalyzeAgent.analyze(
         question=state["question"],
         history=state.get("history"),
@@ -79,10 +27,9 @@ def analyze_node(state):
     
     #Planner
     plan = PlannerAgent.plan(
-        analysis
+        analysis=analysis
     )
 
-<<<<<<< Updated upstream
     intent = analysis.get("intent", "rag")
 
     # If the user scoped the chat to specific documents, always use
@@ -90,43 +37,15 @@ def analyze_node(state):
     # regardless of how the question is phrased.
     if state.get("document_ids"):
         intent = "rag"
+        plan["action"] = "rag"
 
     return {
         "intent": intent,
-=======
-    print("=" * 80)
-    print("ANALYSIS RESULT =", analysis)
-    print("CHAT NODE MEMORY")
-    print(state.get("memory"))
-    print("PLANNER")
-    print(plan)
-    print("=" * 80)
-    
-    return {
-        "intent": analysis.get("intent", "rag"),
-
         "plan": plan,
-
-        "action": plan.get(
-            "action",
-            analysis.get("intent", "rag")
-        ),
-
->>>>>>> Stashed changes
-        "rewritten_question": analysis.get(
-            "rewritten_question",
-            state["question"]
-        ),
-
-        "keywords": analysis.get(
-            "keywords",
-            []
-        ),
-
-        "filters": analysis.get(
-            "filters",
-            {}
-        )
+        "action": plan["action"],
+        "rewritten_question": analysis["rewritten_question"],
+        "keywords": analysis["keywords"],
+        "filters": analysis["filters"]
     }
 
 
@@ -154,9 +73,7 @@ def rag_node(state):
 # Chat Node
 #------------------
 def chat_node(state):
-    #New
-<<<<<<< Updated upstream
-=======
+
     if not state.get("context", "").strip():
 
         return {
@@ -166,16 +83,7 @@ def chat_node(state):
             ),
             "sources": []
         }
-    
-    print("=" * 80)
-    print("CHAT NODE EXECUTED")
-    print("CONTEXT LENGTH =", len(state.get("context", "")))
-    print("SOURCE COUNT =", len(state.get("sources", [])))
-    print("CHAT AGENT MEMORY")
-    print(state.get("memory"))
-    print("=" * 80)
 
->>>>>>> Stashed changes
     answer = ChatAgent.answer(
         question=state["rewritten_question"],
         context=state["context"],

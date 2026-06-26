@@ -3,7 +3,7 @@ from groq import Groq
 from src.core.config import settings
 
 from src.ai_platform.ai.prompts.analyze_prompt import (
-    FOLLOWUP_SYSTEM_PROMPT
+    ANALYZE_SYSTEM_PROMPT
 )
 
 
@@ -43,7 +43,7 @@ class FollowupAgent:
         messages = [
             {
                 "role": "system",
-                "content": FOLLOWUP_SYSTEM_PROMPT
+                "content": ANALYZE_SYSTEM_PROMPT
             },
             {
                 "role": "user",

@@ -21,6 +21,8 @@ class AnalyzeAgent:
     client = Groq(
         api_key=settings.GROQ_API_KEY
     )
+    
+    MAX_HISTORY = 5
 
     FOLLOWUP_WORDS = {
         "it",
@@ -138,7 +140,7 @@ class AnalyzeAgent:
             "show capabilities",
             "show commands"
         }:
-            return "help"
+            return "chat"
 
         # Summarize
         if any(
@@ -148,7 +150,7 @@ class AnalyzeAgent:
                 "summary"
             ]
         ):
-            return "summarize"
+            return "rag"
 
         # Compare
         if any(
@@ -160,9 +162,10 @@ class AnalyzeAgent:
                 "vs"
             ]
         ):
-            return "compare"
+            return "rag"
+        
         if cls.is_data_question(q):
-            return "data"
+            return "rag"
 
         # Everything else
         return "rag"
@@ -203,7 +206,8 @@ class AnalyzeAgent:
     ):
 
         filename_match = re.search(
-            r'([A-Za-z0-9_\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
+            #r'([A-Za-z0-9_\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
+            r'([\w\s.\-]+\.(pdf|txt|doc|docx|csv|xlsx|xls|ppt|pptx|json|xml|md|py|js|ts|java|go|cs|cpp|html|css|sql|yaml|yml))',
             original_question,
             re.IGNORECASE
         )
@@ -243,8 +247,8 @@ class AnalyzeAgent:
     def analyze(
         cls,
         question: str,
-<<<<<<< Updated upstream
-        history=None
+        history=None,
+        memory=None
     ):
 
         original_question = question
@@ -253,10 +257,24 @@ class AnalyzeAgent:
             original_question
         )
 
+        # question = normalize_query(question)
+
+        # use_history = cls.is_followup(
+        #     question
+        # )
+        
+        
+        #Better version
         question = normalize_query(question)
 
-        use_history = cls.is_followup(
-            question
+        question = FollowupAgent.resolve(
+            question=question,
+            history=history,
+            memory=memory
+        )
+
+        use_history = (
+            question != original_question
         )
 
         regex_filters = cls.extract_filename_filter(
@@ -268,7 +286,8 @@ class AnalyzeAgent:
 
             return {
                 "intent": intent,
-                "rewritten_question": original_question,
+                #"rewritten_question": original_question,
+                "rewritten_question": question,
                 "keywords": cls.generate_keywords(
                     question
                 ),
@@ -288,8 +307,21 @@ class AnalyzeAgent:
                 "content": ANALYZE_SYSTEM_PROMPT
             }
         ]
+        
+        if memory:
 
-        for msg in (history or [])[-5:]:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"""
+        Working Memory
+
+        {json.dumps(memory, indent=2)}
+        """
+                }
+            )
+
+        for msg in (history or [])[-cls.MAX_HISTORY:]:
 
             messages.append(
                 {
@@ -311,58 +343,6 @@ class AnalyzeAgent:
                 model="llama-3.3-70b-versatile",
                 messages=messages,
                 temperature=0.0
-=======
-        history: list = None,
-        memory: dict = None
-    ):
-        
-        # Followup agent
-        question = FollowupAgent.resolve(
-            question=question,
-            history=history,
-            memory=memory
-        )
-        
-        try:           
-            # Prepare history for the prompt
-            formatted_history = []
-            if history:
-                for h in history:
-                    if isinstance(h, dict):
-                        formatted_history.append(h)
-                    elif hasattr(h, "model_dump"):
-                        formatted_history.append(h.model_dump())
-                    elif hasattr(h, "role") and hasattr(h, "content"):
-                        formatted_history.append({
-                            "role": h.role,
-                            "content": h.content
-                        })
-                    else:
-                        try:
-                            formatted_history.append(dict(h))
-                        except Exception:
-                            pass
-
-            response = cls.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                temperature=0,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": ANALYZE_SYSTEM_PROMPT
-                    },
-                    {
-                        "role": "user",
-                        "content": json.dumps(
-                            {
-                                "question": question,
-                                "history": formatted_history,
-                                "memory": memory
-                            }
-                        )
-                    }
-                ]
->>>>>>> Stashed changes
             )
 
             content = (
@@ -372,7 +352,6 @@ class AnalyzeAgent:
                 .content
             )
 
-<<<<<<< Updated upstream
             cleaned = content.strip()
 
             if cleaned.startswith("```"):
@@ -435,32 +414,22 @@ class AnalyzeAgent:
                     original_question
                 )
 
-        except Exception:
+        except Exception as e:
+            print(f"AnalyzeAgent Error: {e}")
             result = {
                 "intent": intent,
                 "rewritten_question": original_question,
                 "keywords": cls.generate_keywords(
-=======
-            analysis = json.loads(content)
-            print("=" * 80)
-            print("ANALYZE AGENT")
-            print("QUESTION =", question)
-            print("MEMORY =", memory)
-            print("RAW =", content)
-            print("INTENT =", analysis.get("intent"))
-            print("REWRITTEN =", analysis.get("rewritten_question"))
-            print("KEYWORDS =", analysis.get("keywords"))
-            print("FILTERS =", analysis.get("filters"))
-            print("=" * 80)
-            return {
-                "intent": "rag",
-                "rewritten_question": analysis.get(
-                    "rewritten_question",
->>>>>>> Stashed changes
                     question
                 ),
                 "filters": {},
-                "needs_rag": True
+                # "needs_rag": True
+                "needs_rag": intent in [
+                    "rag",
+                    "data",
+                    "compare",
+                    "summarize"
+                ]
             }
 
         llm_filters = result.get(
