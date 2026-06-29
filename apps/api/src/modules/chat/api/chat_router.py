@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.core.database import get_db
+from src.modules.chat.models.admin_models import FailedQuery
 
 
 from src.modules.chat.schemas.chat_schema import (
@@ -37,6 +38,37 @@ router = APIRouter(
     prefix="/chat",
     tags=["Chat"]
 )
+
+
+def _failure_reason(error: Exception) -> str:
+    message = str(error).strip()
+    if message and len(message) <= 120:
+        return message[:255]
+    return type(error).__name__[:255]
+
+
+def _log_failed_query(
+    db: Session,
+    question: str,
+    user_id: int,
+    document_ids: list[int] | None,
+    reason: str
+):
+    try:
+        first_doc_id = document_ids[0] if document_ids else None
+        db.add(
+            FailedQuery(
+                question=question,
+                user_id=user_id,
+                repository_id=first_doc_id,
+                failure_reason=reason[:255],
+            )
+        )
+        db.commit()
+    except Exception as log_err:
+        print(f"[FailedQuery] Could not log failure: {log_err}")
+        db.rollback()
+
 
 @router.post(
     "",
@@ -82,6 +114,15 @@ def chat(
             content=response["answer"]
         )
 
+        if response.get("failure_reason"):
+            _log_failed_query(
+                db=db,
+                question=request.question,
+                user_id=user.id,
+                document_ids=request.document_ids,
+                reason=response["failure_reason"]
+            )
+
         return ChatResponse(
             answer=response["answer"],
             sources=response.get("sources", []),
@@ -89,16 +130,25 @@ def chat(
         )
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
+
+        _log_failed_query(
+            db=db,
+            question=request.question,
+            user_id=user.id,
+            document_ids=request.document_ids,
+            reason=_failure_reason(e)
+        )
+
         # Fallback response
         error_msg = "I encountered an error while processing your request. Please try again later."
-        
+
         ChatHistoryService.save(
             db=db,
             user_id=user.id,
             role="assistant",
             content=error_msg
         )
-        
+
         return ChatResponse(
             answer=error_msg,
             sources=[],
@@ -151,11 +201,26 @@ def regenerate_answer(
         content=payload.question
     )
 
-    result = ChatService.ask(
-        question=payload.question,
-        db=db,
-        user=user
-    )
+    try:
+        result = ChatService.ask(
+            question=payload.question,
+            db=db,
+            user=user
+        )
+    except Exception as e:
+        print(f"Error in regenerate endpoint: {e}")
+        _log_failed_query(
+            db=db,
+            question=payload.question,
+            user_id=user.id,
+            document_ids=None,
+            reason=_failure_reason(e)
+        )
+        result = {
+            "answer": "I encountered an error while processing your request. Please try again later.",
+            "sources": [],
+            "intent": "chat"
+        }
 
     # Save regenerated answer
     ChatHistoryService.save(
@@ -165,8 +230,16 @@ def regenerate_answer(
         content=result["answer"]
     )
 
-    return result
+    if result.get("failure_reason"):
+        _log_failed_query(
+            db=db,
+            question=payload.question,
+            user_id=user.id,
+            document_ids=None,
+            reason=result["failure_reason"]
+        )
 
+    return result
 
 
 

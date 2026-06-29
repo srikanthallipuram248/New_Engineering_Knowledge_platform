@@ -22,6 +22,10 @@ from src.modules.chat.api.chat_session_router import (
     router as chat_session_router
 )
 
+from src.modules.admin.api.admin_router import (
+    router as admin_router
+)
+
 
 #CREATE TABLES
 Base.metadata.create_all(
@@ -80,8 +84,13 @@ app.include_router(
     prefix="/api/v1"
 )
 
+# Admin dashboard
+app.include_router(
+    admin_router,
+    prefix="/api/v1"
+)
+
 
 @app.get("/")
 def root():
     return {"message": "API Running"}
-

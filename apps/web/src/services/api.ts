@@ -126,6 +126,19 @@ export function logout(): void {
   localStorage.removeItem('refresh_token')
 }
 
+export interface CurrentUser {
+  id: number
+  name: string | null
+  email: string
+  role: string
+}
+
+export async function getCurrentUser(): Promise<CurrentUser> {
+  return apiFetch<CurrentUser>(`${BASE}/users/me`, {
+    headers: authHeaders(),
+  })
+}
+
 // ── Analyzer ──────────────────────────────────────────────────────────────
 
 export interface KeyModule    { name: string; role: string }
@@ -209,6 +222,73 @@ export async function analyzeRepo(gitUrl: string): Promise<RepoAnalysisResult> {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ git_url: gitUrl }),
+  })
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────
+
+export interface AdminStats {
+  total_users: number
+  active_users: number
+  total_repositories: number
+  total_chunks: number
+  total_messages: number
+  failed_queries: number
+}
+
+export interface AdminRepository {
+  id: number
+  title: string
+  file_name: string
+  file_type: string
+  created_at: string
+  uploaded_by: number
+  uploaded_by_name: string | null
+  uploaded_by_email: string
+  chunk_count: number
+}
+
+export interface AdminUser {
+  id: number
+  name: string | null
+  email: string
+  role: string
+  is_active: boolean
+}
+
+export interface AdminMessage {
+  id: number
+  user_id: number
+  user_name: string | null
+  user_email: string
+  role: 'user' | 'assistant' | string
+  content: string
+  created_at: string
+}
+
+export interface AdminFailedQuery {
+  id: number
+  question: string
+  user_id: number
+  user_name: string | null
+  user_email: string
+  repository_id: number | null
+  repository_name: string | null
+  failure_reason: string
+  timestamp: string
+}
+
+export interface AdminDashboard {
+  stats: AdminStats
+  repositories: AdminRepository[]
+  users: AdminUser[]
+  recent_messages: AdminMessage[]
+  failed_queries_list: AdminFailedQuery[]
+}
+
+export async function getAdminDashboard(): Promise<AdminDashboard> {
+  return apiFetch<AdminDashboard>(`${BASE}/admin/dashboard`, {
+    headers: authHeaders(),
   })
 }
 

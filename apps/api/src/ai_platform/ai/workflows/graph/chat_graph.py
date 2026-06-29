@@ -5,7 +5,7 @@ from src.ai_platform.ai.workflows.states.chat_state import ChatState
 from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
-    chat_node,
+    rag_chat_node,
     general_chat_node
 )
 
@@ -35,8 +35,8 @@ def build_chat_graph():
     )
 
     graph.add_node(
-        "chat",
-        chat_node
+        "rag_chat",
+        rag_chat_node
     )
 
     graph.add_node(
@@ -62,11 +62,11 @@ def build_chat_graph():
     # RAG path
     graph.add_edge(
         "rag",
-        "chat"
+        "rag_chat"
     )
 
     graph.add_edge(
-        "chat",
+        "rag_chat",
         END
     )
 

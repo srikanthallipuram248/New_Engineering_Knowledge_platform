@@ -72,7 +72,7 @@ class ChatService:
         question,
         db,
         user,
-        #document_ids=None
+        document_ids=None
     ):
         history = ChatHistoryService.get_recent(
             db=db,
@@ -87,8 +87,8 @@ class ChatService:
             {
                 "question": question,
                 "history": history,
-                "uploaded_by": user.id
-                #"document_ids": document_ids or []
+                "uploaded_by": user.id,
+                "document_ids": document_ids or []
             }
         )
 
@@ -146,7 +146,8 @@ class ChatService:
         return {
             "answer": result["answer"],
             "sources": sources,
-            "intent": result["intent"]
+            "intent": result.get("intent", "rag"),
+            "failure_reason": result.get("failure_reason")
         }
     
     

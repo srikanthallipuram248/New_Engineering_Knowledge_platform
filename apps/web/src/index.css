@@ -149,4 +149,9 @@
     -webkit-text-fill-color: transparent;
     color: transparent;
   }
+
+  /* ── Dashboard tab highlight ── */
+  .tab-active-glow {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25), 0 2px 8px hsl(var(--primary) / 0.08);
+  }
 }

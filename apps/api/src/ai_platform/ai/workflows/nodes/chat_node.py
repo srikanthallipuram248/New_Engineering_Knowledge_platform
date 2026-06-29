@@ -72,12 +72,14 @@ def rag_node(state):
 #----------------
 # RAG Chat Node
 #------------------
-def chat_node(state):
+def rag_chat_node(state):
     #New
     if not state.get("context", "").strip():
         return {
             "answer": "I could not find any relevant information in the repository to answer your question.",
-            "sources": state.get("sources", [])
+            "sources": state.get("sources", []),
+            "intent": "rag",
+            "failure_reason": "no_context"
         }
     
     answer = ChatAgent.answer(
@@ -87,7 +89,8 @@ def chat_node(state):
     )
 
     return {
-        "answer": answer
+        "answer": answer,
+        "intent": "rag"
     }
 
 
@@ -95,12 +98,14 @@ def chat_node(state):
 # General Chat Node
 #--------------------
 def general_chat_node(state):
-    return {
-        "answer": "I don't know based on the uploaded documents.",
-        "intent": "chat",
-        "sources": []
-    }
+    answer = DirectChatAgent.answer(
+        state["question"]
+    )
 
+    return {
+        "answer": answer,
+        "intent": "chat"
+    }
 
 
 
