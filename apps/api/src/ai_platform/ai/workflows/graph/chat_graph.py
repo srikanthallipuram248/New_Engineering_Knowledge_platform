@@ -6,17 +6,11 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
     chat_node,
-    # for intent router
     direct_chat_node
 )
 
 
-# Create Router fuction for intent router graph
-# def route_intent(state):
-#     return state.get(
-#         "intent",
-#         "rag"
-#     )
+
 
 def route_action(state):
     return state.get(
@@ -49,7 +43,6 @@ def build_chat_graph():
 
     graph = StateGraph(ChatState)
 
-    # Nodes
     graph.add_node(
         "analyze",
         analyze_node
@@ -65,13 +58,11 @@ def build_chat_graph():
         chat_node
     )
 
-    # for intent router
     graph.add_node(
         "direct_chat",
         direct_chat_node
     )
 
-    # Entry Points
     graph.set_entry_point(
         "analyze"
     )
@@ -81,7 +72,6 @@ def build_chat_graph():
     #     "rag"
     # )
 
-    # Intent Router
     graph.add_conditional_edges(
         "analyze",
         route_action,
@@ -93,7 +83,6 @@ def build_chat_graph():
         }
     )
 
-    # Direct Chat path
     graph.add_edge(
         "direct_chat",
         END

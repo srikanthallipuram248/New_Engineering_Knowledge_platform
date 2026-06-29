@@ -3,16 +3,16 @@ from groq import Groq
 
 from src.core.config import settings
 
-from src.ai_platform.ai.prompts.system_promts import (
-    DOCUMENT_QA_SYSTEM_PROMPT
-)
+from src.ai_platform.ai.prompts.system_promts import DOCUMENT_QA_SYSTEM_PROMPT
+
+from typing import Generator
 
 
 class GroqService:
 
-    client = Groq(
-        api_key=settings.GROQ_API_KEY
-    )
+    MODEL = "llama-3.3-70b-versatile"
+
+    client = Groq(api_key=settings.GROQ_API_KEY)
 
     @classmethod
     def generate(
@@ -20,27 +20,45 @@ class GroqService:
         question: str,
         context: str,
         history=None,
-        memory=None
+        memory=None,
     ):
 
         if not context.strip():
+            return "I couldn't find relevant information " "in the uploaded documents."
 
-            return (
-                "I don't know based on the uploaded documents."
-            )
+        messages = cls._build_messages(
+            question=question,
+            context=context,
+            history=history,
+            memory=memory,
+        )
 
+        response = cls.client.chat.completions.create(
+            model=cls.MODEL, messages=messages, temperature=0, max_tokens=1000
+        )
+
+        return response.choices[0].message.content.strip()
+
+    # ----------------------
+    # Private helper
+    # --------------------
+    @classmethod
+    def _build_messages(
+        cls,
+        question: str,
+        context: str,
+        history=None,
+        memory=None,
+    ):
         messages = [
             {
                 "role": "system",
-                "content": DOCUMENT_QA_SYSTEM_PROMPT
+                "content": DOCUMENT_QA_SYSTEM_PROMPT,
             }
         ]
 
-        # -----------------------------
         # Working Memory
-        # -----------------------------
         if memory:
-
             messages.append(
                 {
                     "role": "system",
@@ -57,43 +75,27 @@ class GroqService:
     Do not use it as factual evidence.
 
     {json.dumps(memory, indent=2, default=str)}
-    """
+    """,
                 }
             )
 
-        # -----------------------------
         # Conversation History
-        # -----------------------------
         if history:
-
             for msg in history[-10:]:
-
-                role = (
-                    msg.role
-                    if hasattr(msg, "role")
-                    else msg.get("role", "user")
-                )
+                role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
 
                 content = (
-                    msg.content
-                    if hasattr(msg, "content")
-                    else msg.get("content", "")
+                    msg.content if hasattr(msg, "content") else msg.get("content", "")
                 )
 
-                if (
-                    role in ("user", "assistant")
-                    and content
-                ):
+                if role in ("user", "assistant") and content:
                     messages.append(
                         {
                             "role": role,
-                            "content": content
+                            "content": content,
                         }
                     )
 
-        # -----------------------------
-        # Current Question
-        # -----------------------------
         messages.append(
             {
                 "role": "user",
@@ -111,41 +113,49 @@ class GroqService:
     If the answer cannot be found in the context,
     say that you could not find the information.
 
-    For structured data such as tables,
-    Excel,
-    CSV,
-    JSON,
-    or reports:
+    Do not use outside knowledge.
 
-    - Count rows when asked.
-    - Calculate totals when requested.
-    - Calculate averages when requested.
-    - Find highest and lowest values.
-    - Compare records when requested.
-    - Summarize information when requested.
+    Never guess.
 
-    Do not invent information.
-
-    Do not use outside knowledge if the answer is expected from the uploaded documents.
-    """
+    Never fabricate.
+    """,
             }
         )
 
-        response = cls.client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0,
-            max_tokens=1000
+        return messages
+
+    # ----------------------------
+    # Streaming generator
+    # -----------------------------
+
+    @classmethod
+    def stream_generate(
+        cls,
+        question: str,
+        context: str,
+        history=None,
+        memory=None,
+    ) -> Generator[str, None, None]:
+
+        if not context.strip():
+            yield ("I couldn't find relevant information " "in the uploaded documents.")
+            return
+
+        messages = cls._build_messages(
+            question=question,
+            context=context,
+            history=history,
+            memory=memory,
         )
 
-        return (
-            response
-            .choices[0]
-            .message
-            .content
-            .strip()
+        stream = cls.client.chat.completions.create(
+            model=cls.MODEL,
+            messages=messages,
+            temperature=0,
+            max_tokens=1000,
+            stream=True,
         )
-    
-    
-    
-    
+
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content

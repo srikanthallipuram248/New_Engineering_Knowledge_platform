@@ -30,6 +30,7 @@ class SourceResponse(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     session_id: UUID
+    answer_source: str
     sources: List[SourceResponse] = Field(
         default_factory=list
     )

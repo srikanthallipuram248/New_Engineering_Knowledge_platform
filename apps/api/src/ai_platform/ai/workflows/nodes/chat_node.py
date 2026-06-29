@@ -38,6 +38,17 @@ def analyze_node(state):
     if state.get("document_ids"):
         intent = "rag"
         plan["action"] = "rag"
+        
+    
+    print("=" * 80)
+    print("ANALYZE")
+    print(analysis)
+    print("=" * 80)
+
+    print("=" * 80)
+    print("PLAN")
+    print(plan)
+    print("=" * 80)
 
     return {
         "intent": intent,
@@ -47,6 +58,8 @@ def analyze_node(state):
         "keywords": analysis["keywords"],
         "filters": analysis["filters"]
     }
+    
+    
 
 
 
@@ -62,6 +75,19 @@ def rag_node(state):
         keywords=state.get("keywords"),
         filters=state.get("filters"),
     )
+    
+    print(state["rewritten_question"])
+
+    print("=" * 80)
+    print("RAG RESULTS")
+    print(len(data["results"]))
+    print("=" * 80)
+
+    print("=" * 80)
+    print("CONTEXT")
+    print(data["context"][:1000])
+    print("=" * 80)
+    
     return {
         "context": data["context"],
         "sources": data["results"]
