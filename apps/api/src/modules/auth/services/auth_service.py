@@ -26,6 +26,11 @@ class AuthService:
                 "Invalid credentials"
             )
 
+        if not getattr(user, "is_active", True):
+            raise ValueError(
+                "Your account has been disabled by an administrator"
+            )
+
         if not verify_password(
             password,
             user.hashed_password

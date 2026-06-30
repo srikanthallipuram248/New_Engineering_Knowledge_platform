@@ -18,9 +18,14 @@ from src.modules.analyzer.api.analyzer_router import (
     router as analyzer_router
 )
 
-from src.modules.documents.services.vector_store_service import (
-    VectorStoreService
+from src.modules.chat.api.chat_session_router import (
+    router as chat_session_router
 )
+
+from src.modules.admin.api.admin_router import (
+    router as admin_router
+)
+
 
 from src.modules.chat.api.chat_session_router import (
     router as chat_session_router
@@ -71,6 +76,12 @@ app.include_router(
     prefix="/api/v1"
 )
 
+# Chat session
+app.include_router(
+    chat_session_router,
+    prefix="/api/v1"
+)
+
 
 # Chat session router
 app.include_router(
@@ -84,8 +95,13 @@ app.include_router(
     prefix="/api/v1"
 )
 
+# Admin dashboard
+app.include_router(
+    admin_router,
+    prefix="/api/v1"
+)
+
 
 @app.get("/")
 def root():
     return {"message": "API Running"}
-

@@ -2,12 +2,14 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuroraBackground } from '@/components/layout/AuroraBackground'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AuthGate } from '@/components/auth/AuthGate'
+import { AdminGate } from '@/components/auth/AdminGate'
 import LoginPage from '@/pages/LoginPage'
 import AnalyzerPage from '@/pages/AnalyzerPage'
 import LibraryPage from '@/pages/LibraryPage'
 import SplitViewPage from '@/pages/SplitViewPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import ChatHistoryPage from '@/pages/ChatHistoryPage'
+import AdminDashboardPage from '@/pages/AdminDashboardPage'
 
 /**
  * Routing strategy:
@@ -35,6 +37,9 @@ export default function App() {
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/split" element={<SplitViewPage />} />
             <Route path="/chats" element={<ChatHistoryPage />} />
+            <Route element={<AdminGate />}>
+              <Route path="/admin" element={<AdminDashboardPage />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

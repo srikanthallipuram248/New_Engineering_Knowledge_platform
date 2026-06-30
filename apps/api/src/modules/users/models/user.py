@@ -34,8 +34,14 @@ class User(Base):
         default="Engineer"
     )
     
+    is_active: Mapped[bool] = mapped_column(
+        default=True,
+        nullable=False
+    )
     
     
+    
+
 
 
 

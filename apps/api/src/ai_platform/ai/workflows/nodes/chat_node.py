@@ -14,6 +14,7 @@ from src.ai_platform.ai.agents.planner_agent import (
 
 
 
+
 #-------------------
 # Analyze Node
 #-------------------
@@ -62,13 +63,19 @@ def analyze_node(state):
     
 
 
-
 #-----------------
 # RAG Node
 #-------------------
 def rag_node(state):
+    # Pass the state values as the 'analysis' dict to avoid redundant analysis
+    analysis = {
+        "rewritten_question": state.get("rewritten_question", state["question"]),
+        "keywords": state.get("keywords", []),
+        "filters": state.get("filters", {})
+    }
+    
     data = RAGService.retrieve(
-        question=state["rewritten_question"],
+        question=state["question"],
         history=state.get("history"),
         document_ids=state.get("document_ids") or [],
         rewritten_question=state.get("rewritten_question"),
@@ -96,7 +103,7 @@ def rag_node(state):
 
 
 #----------------
-# Chat Node
+# RAG Chat Node
 #------------------
 def chat_node(state):
 
@@ -118,19 +125,24 @@ def chat_node(state):
     )
 
     return {
-        "answer": answer
+        "answer": answer,
+        "intent": "rag"
     }
 
 
-#------------------
-# Direct chat node
-# -----------------
-
-def direct_chat_node(state):
+#--------------------
+# General Chat Node
+#--------------------
+def general_chat_node(state):
     answer = DirectChatAgent.answer(
         state["question"]
     )
 
     return {
-        "answer": answer
+        "answer": answer,
+        "intent": "chat"
     }
+
+
+
+

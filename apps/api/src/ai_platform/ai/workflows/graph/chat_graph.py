@@ -54,13 +54,13 @@ def build_chat_graph():
     )
 
     graph.add_node(
-        "chat",
-        chat_node
+        "rag_chat",
+        rag_chat_node
     )
 
     graph.add_node(
-        "direct_chat",
-        direct_chat_node
+        "general_chat",
+        general_chat_node
     )
 
     graph.set_entry_point(
@@ -91,16 +91,16 @@ def build_chat_graph():
 
     graph.add_conditional_edges(
         "rag",
-        router_context,
-        {
-            "rag_found": "chat",
-            "no_results": "direct_chat"
-        }
+        "rag_chat"
     )
 
+    graph.add_edge(
+        "rag_chat",
+        END
+    )
 
     graph.add_edge(
-        "chat",
+        "general_chat",
         END
     )
 

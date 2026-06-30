@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 from src.core.database import get_db
+from src.modules.chat.models.admin_models import FailedQuery
 
 from src.modules.chat.models.chat_session import (
     ChatSession
@@ -28,7 +29,41 @@ from fastapi.responses import StreamingResponse
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-@router.post("", response_model=ChatResponse, response_model_exclude_none=True)
+def _failure_reason(error: Exception) -> str:
+    message = str(error).strip()
+    if message and len(message) <= 120:
+        return message[:255]
+    return type(error).__name__[:255]
+
+
+def _log_failed_query(
+    db: Session,
+    question: str,
+    user_id: int,
+    document_ids: list[int] | None,
+    reason: str
+):
+    try:
+        first_doc_id = document_ids[0] if document_ids else None
+        db.add(
+            FailedQuery(
+                question=question,
+                user_id=user_id,
+                repository_id=first_doc_id,
+                failure_reason=reason[:255],
+            )
+        )
+        db.commit()
+    except Exception as log_err:
+        print(f"[FailedQuery] Could not log failure: {log_err}")
+        db.rollback()
+
+
+@router.post(
+    "",
+    response_model=ChatResponse,
+    response_model_exclude_none=True
+)
 def chat(
     request: ChatRequest, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
@@ -53,29 +88,72 @@ def chat(
         content=request.question,
     )
 
-    response = ChatService.ask(
-        question=request.question,
-        session_id=session.id,
-        document_ids=request.document_ids,
-        db=db,
-        user=user,
-    )
+    # answer = ChatService.ask(
+    #     db=db,
+    #     user=user,
+    #     question=request.question
+    # )
 
-    ChatHistoryService.save(
-        db=db,
-        user_id=user.id,
-        # session_id=request.session_id,
-        session_id=session.id,
-        role="assistant",
-        content=response["answer"],
-    )
+    # return ChatResponse(
+    #     answer=answer
+    # )
 
-    return ChatResponse(
-        answer=response["answer"],
-        session_id=session.session_uuid,
-        sources=response["sources"],
-        answer_source=response["answer_source"],
-    )
+    #New
+    try:
+        response = ChatService.ask(
+            question=request.question,
+            document_ids=request.document_ids,
+            db=db,
+            user=user
+        )
+
+        ChatHistoryService.save(
+            db=db,
+            user_id=user.id,
+            role="assistant",
+            content=response["answer"]
+        )
+
+        if response.get("failure_reason"):
+            _log_failed_query(
+                db=db,
+                question=request.question,
+                user_id=user.id,
+                document_ids=request.document_ids,
+                reason=response["failure_reason"]
+            )
+
+        return ChatResponse(
+            answer=response["answer"],
+            sources=response.get("sources", []),
+            intent=response.get("intent", "rag")
+        )
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+
+        _log_failed_query(
+            db=db,
+            question=request.question,
+            user_id=user.id,
+            document_ids=request.document_ids,
+            reason=_failure_reason(e)
+        )
+
+        # Fallback response
+        error_msg = "I encountered an error while processing your request. Please try again later."
+
+        ChatHistoryService.save(
+            db=db,
+            user_id=user.id,
+            role="assistant",
+            content=error_msg
+        )
+
+        return ChatResponse(
+            answer=error_msg,
+            sources=[],
+            intent="chat"
+        )
 
 
 # -----------------
@@ -187,13 +265,26 @@ def regenerate_answer(
         content=payload.question,
     )
 
-    result = ChatService.ask(
-        question=payload.question,
-        document_ids=payload.document_ids,
-        db=db,
-        session_id=session.id,
-        user=user,
-    )
+    try:
+        result = ChatService.ask(
+            question=payload.question,
+            db=db,
+            user=user
+        )
+    except Exception as e:
+        print(f"Error in regenerate endpoint: {e}")
+        _log_failed_query(
+            db=db,
+            question=payload.question,
+            user_id=user.id,
+            document_ids=None,
+            reason=_failure_reason(e)
+        )
+        result = {
+            "answer": "I encountered an error while processing your request. Please try again later.",
+            "sources": [],
+            "intent": "chat"
+        }
 
     # Save regenerated answer
     ChatHistoryService.save(
@@ -204,4 +295,18 @@ def regenerate_answer(
         content=result["answer"],
     )
 
+    if result.get("failure_reason"):
+        _log_failed_query(
+            db=db,
+            question=payload.question,
+            user_id=user.id,
+            document_ids=None,
+            reason=result["failure_reason"]
+        )
+
     return result
+
+
+
+
+

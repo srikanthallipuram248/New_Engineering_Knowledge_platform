@@ -13,9 +13,9 @@ from src.ai_platform.ai.rag.hybrid_search_service import (
 
 class RAGService:
 
-    SEARCH_LIMIT = 10
-    CONTEXT_LIMIT = 8
-    MAX_CONTEXT_CHARS = 12000
+    SEARCH_LIMIT = 15
+    CONTEXT_LIMIT = 10
+    MAX_CONTEXT_CHARS = 30000
 
     @staticmethod
     def build_context(results):
@@ -62,6 +62,16 @@ CONTENT:
             "rewritten_question"
         ]
 
+        # results = HybridSearchService.search(
+        #     query=rewritten_question,
+        #     filters=analysis.get(
+        #         "filters",
+        #         {}
+        #     ),
+        #     limit=RAGService.SEARCH_LIMIT
+        #     #uploaded_by=uploaded_by
+        # )
+
         search_query = " ".join(
             analysis.get(
                 "keywords",
@@ -82,6 +92,16 @@ CONTENT:
             search_query
         )
 
+        print(
+            "KEYWORDS =",
+            analysis.get("keywords")
+        )
+
+        print(
+            "SEARCH QUERY =",
+            search_query
+        )
+
         results = HybridSearchService.search(
             query=search_query,
             filters=analysis.get(
@@ -91,20 +111,6 @@ CONTENT:
             limit=RAGService.SEARCH_LIMIT
         )
 
-        print("=" * 80)
-        print("QUESTION =", question)
-        print("SEARCH QUERY =", search_query)
-        print("RESULT COUNT =", len(results))
-
-        for r in results[:10]:
-            print(
-                "FILE=",
-                r.get("filename"),
-                " SCORE=",
-                r.get("rerank_score")
-            )
-
-        print("=" * 80)
 
 
         if not results:
@@ -141,9 +147,7 @@ CONTENT:
         question: str,
         history: list = None,
         document_ids: list = None,
-        rewritten_question: str = None,
-        keywords: list = None,
-        filters: dict = None,
+        analysis: dict = None
     ):
         # Use pre-computed analysis from analyze_node when available so we
         # don't make a second (redundant) Groq call here.
@@ -153,15 +157,32 @@ CONTENT:
             keywords = analysis.get("keywords", [])
             filters = analysis.get("filters", {})
 
-        if filters is None:
-            filters = {}
+        if not analysis:
+            analysis = AnalyzeAgent.analyze(
+                question,
+                history
+            )
 
         scoped_filters = dict(filters)
         if document_ids:
             scoped_filters["document_ids"] = document_ids
 
-        search_query = " ".join(keywords) if keywords else rewritten_question
-        queries = [question, rewritten_question] + (keywords or [])
+        filters = analysis.get(
+            "filters",
+            {}
+        )
+        if document_ids:
+            filters["document_ids"] = document_ids
+
+        search_query = " ".join(
+            analysis.get(
+                "keywords",
+                []
+            )
+        )
+
+        if not search_query:
+            search_query = rewritten_question
 
         # Search within the selected documents first
         results = HybridSearchService.search(
