@@ -1,2 +1,15 @@
 .env
 *.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Uploads (user files — never commit)
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
+# Seed scripts
+apps/api/seed_knowledge.py

@@ -14,7 +14,7 @@ class SearchService:
     @staticmethod
     def search(
         query: str,
-        limit: int = 50,
+        limit: int = 200,
         filters: dict = None
     ):
         embedding = EmbeddingsService.generate(query)

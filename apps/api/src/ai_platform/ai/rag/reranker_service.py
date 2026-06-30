@@ -41,13 +41,6 @@ class RerankerService:
             reverse=True
         )
 
-        filtered = [
-            r 
-            for r in ranked
-            if r["rerank_score"] > cls.MIN_RERANK_SCORE
-        ]
-
-        return filtered[:top_k]
-    
+        return ranked[:top_k]
     
     

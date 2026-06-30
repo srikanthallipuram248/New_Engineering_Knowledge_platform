@@ -12,6 +12,11 @@ from src.ai_platform.ai.prompts.analyze_prompt import (
     ANALYZE_SYSTEM_PROMPT
 )
 
+from src.ai_platform.ai.prompts.query_classifier_prompt import (
+    QUERY_CLASSIFIER_PROMPT
+)
+
+
 from src.ai_platform.ai.agents.followup_agent import (
     FollowupAgent
 )
@@ -247,6 +252,8 @@ class AnalyzeAgent:
     def analyze(
         cls,
         question: str,
+        history: list = None
+    ):
         history=None,
         memory=None
     ):
@@ -338,82 +345,60 @@ class AnalyzeAgent:
         )
 
         try:
+            # Prepare history for the prompt
+            formatted_history = []
+            if history:
+                for h in history:
+                    if isinstance(h, dict):
+                        formatted_history.append(h)
+                    elif hasattr(h, "model_dump"):
+                        formatted_history.append(h.model_dump())
+                    elif hasattr(h, "role") and hasattr(h, "content"):
+                        formatted_history.append({
+                            "role": h.role,
+                            "content": h.content
+                        })
+                    else:
+                        try:
+                            formatted_history.append(dict(h))
+                        except Exception:
+                            pass
 
             response = cls.client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=messages,
-                temperature=0.0
+                temperature=0,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ANALYZE_SYSTEM_PROMPT
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "question": question,
+                                "history": formatted_history
+                            }
+                        )
+                    }
+                ]
             )
 
-            content = (
-                response
-                .choices[0]
-                .message
-                .content
-            )
+            content = response.choices[0].message.content.strip()
+            
+            # Extract JSON if the model wrapped it in code blocks
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
 
-            cleaned = content.strip()
+            analysis = json.loads(content)
 
-            if cleaned.startswith("```"):
-
-                cleaned = cleaned.replace(
-                    "```json",
-                    ""
-                )
-
-                cleaned = cleaned.replace(
-                    "```",
-                    ""
-                )
-
-                cleaned = cleaned.strip()
-
-            match = re.search(
-                r"\{.*\}",
-                cleaned,
-                re.DOTALL
-            )
-
-            if match:
-                cleaned = match.group(0)
-
-            result = json.loads(
-                cleaned
-            )
-
-            result.setdefault(
-                "intent",
-                intent
-            )
-
-            result.setdefault(
-                "rewritten_question",
-                original_question
-            )
-
-            result.setdefault(
-                "keywords",
-                []
-            )
-
-            result.setdefault(
-                "filters",
-                {}
-            )
-
-            result.setdefault(
-                "needs_rag",
-                True
-            )
-
-
-            if not result.get(
-                "rewritten_question"
-            ):
-                result["rewritten_question"] = (
-                    original_question
-                )
-
+            return {
+                "intent": analysis.get("intent", "rag"),
+                "rewritten_question": analysis.get("rewritten_question", question),
+                "keywords": analysis.get("keywords", []),
+                "filters": analysis.get("filters", {})
         except Exception as e:
             print(f"AnalyzeAgent Error: {e}")
             result = {
@@ -432,28 +417,15 @@ class AnalyzeAgent:
                 ]
             }
 
-        llm_filters = result.get(
-            "filters",
-            {}
-        )
+        except Exception as e:
+            print(f"Error in AnalyzeAgent: {e}")
+            # Fallback to defaults
+            return {
+                "intent": "rag",
+                "rewritten_question": question,
+                "keywords": [],
+                "filters": {}
+            }
 
-        llm_filters.update(
-            regex_filters
-        )
 
-        result["filters"] = llm_filters
 
-        if not result.get(
-            "keywords"
-        ):
-            result["keywords"] = cls.generate_keywords(
-                result.get(
-                    "rewritten_question",
-                    question
-                )
-            )
-
-        return result
-    
-
-    

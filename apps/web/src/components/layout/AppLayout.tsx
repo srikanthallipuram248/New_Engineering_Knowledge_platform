@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { LogOut, History } from 'lucide-react'
+import { History, LogOut, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ToolSwitcher, type ToolId } from './ToolSwitcher'
 import { ViewModeToggle, type ViewMode } from './ViewModeToggle'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import { getCurrentUser } from '@/services/api'
+import type { CurrentUser } from '@/services/api'
 
 const TOOL_STORAGE_KEY = 'ekp.view.tool'
 const MODE_STORAGE_KEY = 'ekp.view.mode'
@@ -37,6 +39,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const isSplit = location.pathname === '/split'
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
   const [tool, setToolState] = useState<ToolId>(() =>
     readStored<ToolId>(TOOL_STORAGE_KEY, 'analyzer'),
@@ -86,10 +89,29 @@ export function AppLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, mode])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const user = await getCurrentUser()
+        if (!cancelled) setCurrentUser(user)
+      } catch {
+        if (!cancelled) setCurrentUser(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   function handleLogout() {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const isAdmin = ['admin', 'administrator'].includes(
+    currentUser?.role?.trim().toLowerCase() ?? '',
+  )
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -114,6 +136,22 @@ export function AppLayout() {
         )}
 
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin')}
+              className={cn(
+                'hidden gap-1.5 text-[11px] font-medium sm:inline-flex',
+                location.pathname === '/admin'
+                  ? 'text-primary hover:text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Admin
+            </Button>
+          )}
           {/* Chat history link */}
           <Button
             variant="ghost"

@@ -43,6 +43,8 @@ class ChatState(TypedDict):
     
     user_id: int
 
+    # Optional admin analytics signal
+    failure_reason: Optional[str]
 
 
 

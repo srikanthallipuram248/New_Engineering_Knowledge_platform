@@ -2,6 +2,7 @@ from src.ai_platform.ai.llms.groq_service import (
     GroqService
 )
 
+
 class ChatAgent:
 
     @staticmethod
@@ -11,7 +12,7 @@ class ChatAgent:
         history = None,
         memory=None
     ):
-        
+
         return GroqService.generate(
             question=question,
             context=context,
