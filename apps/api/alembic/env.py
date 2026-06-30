@@ -10,9 +10,9 @@ from src.core.config import settings
 from src.modules.users.models.user import User
 from src.modules.documents.models.document import Document
 from src.modules.documents.models.document_chunk import DocumentChunk
-from src.modules.chat.models.chat_history import ChatHistory
 from src.modules.chat.models.chat_message import ChatMessage
 from src.modules.chat.models.chat_session import ChatSession
+from src.modules.chat.models.admin_models import ChatFeedback, FailedQuery
 
 
 from urllib.parse import quote_plus
