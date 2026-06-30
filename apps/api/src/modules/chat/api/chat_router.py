@@ -104,12 +104,14 @@ def chat(
             question=request.question,
             document_ids=request.document_ids,
             db=db,
+            session_id=session.id,
             user=user
         )
 
         ChatHistoryService.save(
             db=db,
             user_id=user.id,
+            session_id=session.id,
             role="assistant",
             content=response["answer"]
         )
@@ -125,8 +127,9 @@ def chat(
 
         return ChatResponse(
             answer=response["answer"],
-            sources=response.get("sources", []),
-            intent=response.get("intent", "rag")
+            session_id=request.session_id,
+            answer_source=response.get("answer_source", "ai"),
+            sources=response.get("sources", [])
         )
     except Exception as e:
         print(f"Error in chat endpoint: {e}")
@@ -145,14 +148,16 @@ def chat(
         ChatHistoryService.save(
             db=db,
             user_id=user.id,
+            session_id=session.id,
             role="assistant",
             content=error_msg
         )
 
         return ChatResponse(
             answer=error_msg,
-            sources=[],
-            intent="chat"
+            session_id=request.session_id,
+            answer_source="ai",
+            sources=[]
         )
 
 
@@ -269,7 +274,9 @@ def regenerate_answer(
         result = ChatService.ask(
             question=payload.question,
             db=db,
-            user=user
+            session_id=session.id,
+            user=user,
+            document_ids=payload.document_ids,
         )
     except Exception as e:
         print(f"Error in regenerate endpoint: {e}")
@@ -277,13 +284,14 @@ def regenerate_answer(
             db=db,
             question=payload.question,
             user_id=user.id,
-            document_ids=None,
+            document_ids=payload.document_ids,
             reason=_failure_reason(e)
         )
         result = {
             "answer": "I encountered an error while processing your request. Please try again later.",
             "sources": [],
-            "intent": "chat"
+            "intent": "chat",
+            "answer_source": "ai"
         }
 
     # Save regenerated answer
