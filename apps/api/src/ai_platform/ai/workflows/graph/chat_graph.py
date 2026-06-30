@@ -19,29 +19,21 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
 #     )
 
 def route_action(state):
-    return state.get(
-        "action",
-        "rag"
-    )
+    action = state.get("action", "rag")
+    # Only pure greetings skip RAG — everything else searches Qdrant first.
+    # This ensures questions like "what is redis" hit the knowledge base
+    # instead of falling back to raw LLM general knowledge.
+    if action == "greeting":
+        return "greeting"
+    return "rag"
 
 
 def router_context(state):
-
-    context = state.get(
-        "context",
-        ""
-    )
-
+    context = state.get("context", "")
     if context.strip():
         return "rag_found"
-
-    # If the user scoped to specific documents and we found nothing,
-    # still go through the chat node so the LLM can say "I couldn't
-    # find that in the selected document" rather than falling back to
-    # the generic direct_chat agent which ignores document context.
-    if state.get("document_ids"):
-        return "rag_found"
-
+    # No results found — go to chat_node which returns a clean
+    # "I couldn't find it" message without calling the LLM.
     return "no_results"
 
 
@@ -81,31 +73,29 @@ def build_chat_graph():
     #     "rag"
     # )
 
-    # Intent Router
+    # Only greetings skip RAG; everything else searches Qdrant first
     graph.add_conditional_edges(
         "analyze",
         route_action,
         {
             "greeting": "direct_chat",
-            "chat": "direct_chat",
             "rag": "rag",
-            "metadata": "direct_chat"
         }
     )
 
-    # Direct Chat path
+    # Direct Chat path (greetings only)
     graph.add_edge(
         "direct_chat",
         END
     )
 
-
+    # If RAG finds context → answer from it; if not → chat_node says "I don't know"
     graph.add_conditional_edges(
         "rag",
         router_context,
         {
             "rag_found": "chat",
-            "no_results": "direct_chat"
+            "no_results": "chat",
         }
     )
 
