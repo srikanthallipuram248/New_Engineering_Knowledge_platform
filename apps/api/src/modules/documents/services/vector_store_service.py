@@ -13,6 +13,10 @@ from qdrant_client.models import (
 
 class VectorStoreService:
 
+    # Must match the embedding model's output dimension
+    # (all-MiniLM-L6-v2 → 384). If you change the model, change this too.
+    EXPECTED_DIM = 384
+
     def __init__(self):
         self.client = QdrantClient(
             host="qdrant",
@@ -31,15 +35,32 @@ class VectorStoreService:
             for c in collections.collections
         ]
 
-        if "documents" not in names:
+        if "documents" in names:
+            # Self-heal: if an existing collection has the wrong vector size
+            # (e.g. left over from a different embedding model), recreate it.
+            # Stale vectors are unusable with the current model anyway.
+            try:
+                info = self.client.get_collection("documents")
+                current_dim = info.config.params.vectors.size
+            except Exception:
+                current_dim = None
 
-            self.client.create_collection(
-                collection_name="documents",
-                vectors_config=VectorParams(
-                    size=384,
-                    distance=Distance.COSINE
-                )
+            if current_dim == self.EXPECTED_DIM:
+                return
+
+            print(
+                f"[VectorStore] 'documents' collection dim {current_dim} "
+                f"!= expected {self.EXPECTED_DIM}. Recreating."
             )
+            self.client.delete_collection("documents")
+
+        self.client.create_collection(
+            collection_name="documents",
+            vectors_config=VectorParams(
+                size=self.EXPECTED_DIM,
+                distance=Distance.COSINE
+            )
+        )
 
 
     def insert_chunk(
