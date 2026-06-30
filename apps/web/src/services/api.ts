@@ -231,6 +231,9 @@ export interface ChatApiResponse {
   answer: string;
   answer_source: "ai" | "documents";
   sources: ChatSource[];
+  /** Server-side ChatMessage.id for the assistant turn — needed to
+   *  attach thumbs up/down feedback via POST /chat/feedback. */
+  message_id?: number;
 }
 
 export interface ChatSessionResponse {
@@ -291,6 +294,24 @@ export async function askChat(
       ...(documentIds && documentIds.length > 0
         ? { document_ids: documentIds }
         : {}),
+    }),
+  });
+}
+
+/** Record a per-user thumbs up/down on a specific assistant ChatMessage
+ *  row. Drives the Admin Dashboard's "Failed Queries" stat (sum of
+ *  not_helpful across all users) and the per-user thumbs-down
+ *  leaderboard. Rating must be exactly 'helpful' or 'not_helpful'. */
+export async function sendChatFeedback(
+  messageId: number,
+  rating: "helpful" | "not_helpful",
+): Promise<{ message_id: number; rating: string; recorded: boolean }> {
+  return apiFetch(`${BASE}/chat/feedback`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      message_id: messageId,
+      rating,
     }),
   });
 }
@@ -430,12 +451,22 @@ export interface AdminFailedQuery {
   timestamp: string
 }
 
+/** Per-user row in the admin "Failed Queries" leaderboard.
+ *  `count` = cumulative number of thumbs-downs that user has given. */
+export interface AdminThumbsDownEntry {
+  user_id: number
+  user_name: string | null
+  user_email: string
+  count: number
+}
+
 export interface AdminDashboard {
   stats: AdminStats
   repositories: AdminRepository[]
   users: AdminUser[]
   recent_messages: AdminMessage[]
   failed_queries_list: AdminFailedQuery[]
+  thumbs_down_leaderboard: AdminThumbsDownEntry[]
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboard> {

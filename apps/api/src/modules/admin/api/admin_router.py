@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.core.database import get_db
-from src.modules.chat.models.admin_models import FailedQuery
+from src.modules.chat.models.admin_models import ChatFeedback, FailedQuery
 from src.modules.chat.models.chat_message import ChatMessage
 from src.modules.documents.models.document import Document
 from src.modules.documents.models.document_chunk import DocumentChunk
@@ -44,7 +44,35 @@ def get_admin_dashboard(
     total_repositories = db.query(func.count(Document.id)).scalar() or 0
     total_chunks = db.query(func.count(DocumentChunk.id)).scalar() or 0
     total_messages = db.query(func.count(ChatMessage.id)).scalar() or 0
-    failed_queries_count = db.query(func.count(FailedQuery.id)).scalar() or 0
+
+    # "Failed Queries" now reflects user-reported thumbs-downs: cumulative
+    # count of ChatFeedback rows where the user rated an AI response as
+    # not_helpful. Drives both the overview stat card and the per-user
+    # leaderboard returned below.
+    failed_queries_count = (
+        db.query(func.count(ChatFeedback.id))
+        .filter(ChatFeedback.rating == "not_helpful")
+        .scalar()
+        or 0
+    )
+
+    # Per-user thumbs-down leaderboard — top 6 users ranked by the number
+    # of not_helpful feedbacks they've submitted. Only includes users with
+    # at least one not_helpful rating.
+    thumbs_down_rows = (
+        db.query(
+            User.id,
+            User.full_name,
+            User.email,
+            func.count(ChatFeedback.id).label("thumbs_down_count"),
+        )
+        .join(ChatFeedback, ChatFeedback.user_id == User.id)
+        .filter(ChatFeedback.rating == "not_helpful")
+        .group_by(User.id, User.full_name, User.email)
+        .order_by(func.count(ChatFeedback.id).desc())
+        .limit(6)
+        .all()
+    )
 
     repository_rows = (
         db.query(
@@ -142,5 +170,16 @@ def get_admin_dashboard(
                 "timestamp": failed_query.timestamp
             }
             for failed_query, full_name, email, file_name in failed_query_rows
-        ]
+        ],
+        # Top users by cumulative thumbs-down count. Consumed by the
+        # ThumbsDownLeaderboard card on the admin overview.
+        "thumbs_down_leaderboard": [
+            {
+                "user_id": user_id,
+                "user_name": full_name,
+                "user_email": email,
+                "count": int(thumbs_down_count),
+            }
+            for user_id, full_name, email, thumbs_down_count in thumbs_down_rows
+        ],
     }

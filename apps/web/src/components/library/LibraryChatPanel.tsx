@@ -34,6 +34,7 @@ import {
   getChatHistory,
   regenerateChat,
   createChatSession,
+  sendChatFeedback,
 } from "@/services/api";
 
 import type {
@@ -403,6 +404,9 @@ useEffect(() => {
               content: res.answer,
               sources: res.sources,
               answer_source: res.answer_source,
+              // Regenerated response gets a fresh backend row — stash
+              // its server-side id so thumbs feedback targets it.
+              serverMessageId: res.message_id,
             }
           : m,
       );
@@ -509,6 +513,9 @@ useEffect(() => {
               content: res.answer,
               sources: res.sources,
               answer_source: res.answer_source,
+              // Stash the server-side ChatMessage.id so the thumbs
+              // up/down buttons can target the right feedback row.
+              serverMessageId: res.message_id,
             }
           : msg,
       );
@@ -1039,13 +1046,28 @@ function MessageBubble({
   const isFailed = message.failed;
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
 
+  // Fire-and-forget POST /chat/feedback — never block the UI or throw
+  // back into the chat flow. The admin dashboard's "Failed Queries" stat
+  // is the sum of every "not_helpful" rating across all users, and the
+  // per-user leaderboard is grouped by user_id, so we record per-message
+  // but always with the current user's id.
+  function recordFeedback(rating: "helpful" | "not_helpful") {
+    const serverId = message.serverMessageId;
+    if (!serverId) return;
+    void sendChatFeedback(serverId, rating).catch((err) => {
+      console.warn("sendChatFeedback failed", err);
+    });
+  }
+
   function handleThumbsDown() {
     setFeedback("down");
+    recordFeedback("not_helpful");
     onRegenerate?.();
   }
 
   function handleThumbsUp() {
     setFeedback("up");
+    recordFeedback("helpful");
   }
 
   return (

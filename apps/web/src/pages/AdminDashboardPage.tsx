@@ -144,6 +144,22 @@ export default function AdminDashboardPage() {
     [topUploaders],
   )
 
+  // Thumbs-down leaderboard: same shape as topUploaders so it slots into
+  // the matching card component without translation. Pulled straight from
+  // the backend payload — server already aggregated by user.
+  const topThumbsDown = useMemo(() => {
+    return (dashboard?.thumbs_down_leaderboard ?? []).map((u) => ({
+      name: u.user_name || u.user_email,
+      email: u.user_email,
+      count: u.count,
+    }))
+  }, [dashboard?.thumbs_down_leaderboard])
+
+  const maxThumbsDown = useMemo(
+    () => Math.max(1, ...topThumbsDown.map((u) => u.count)),
+    [topThumbsDown],
+  )
+
   const tabs: { id: Tab; label: string; icon: React.ElementType; count?: number }[] = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     {
@@ -290,6 +306,8 @@ export default function AdminDashboardPage() {
                     dashboard={dashboard}
                     topUploaders={topUploaders}
                     maxUploads={maxUploads}
+                    topThumbsDown={topThumbsDown}
+                    maxThumbsDown={maxThumbsDown}
                   />
                 )}
                 {activeTab === 'users' && <UsersTab users={dashboard.users} />}
@@ -455,10 +473,14 @@ function OverviewTab({
   dashboard,
   topUploaders,
   maxUploads,
+  topThumbsDown,
+  maxThumbsDown,
 }: {
   dashboard: AdminDashboard
   topUploaders: { name: string; email: string; count: number }[]
   maxUploads: number
+  topThumbsDown: { name: string; email: string; count: number }[]
+  maxThumbsDown: number
 }) {
   return (
     <div className="space-y-5">
@@ -472,6 +494,15 @@ function OverviewTab({
       <div className="grid gap-5 xl:grid-cols-2">
         <MiniActivityFeed messages={dashboard.recent_messages} />
         <FailedQueriesMini queries={dashboard.failed_queries_list} />
+      </div>
+
+      {/* Row 3: Thumbs-down leaderboard — per-user breakdown of the
+          Failed Queries stat number (which itself is the sum across all
+          users). */}
+      <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
+        <div /> {/* spacer to keep leaderboard right-aligned, matching
+                   Row 1's health+leaderboard pattern */}
+        <ThumbsDownLeaderboard entries={topThumbsDown} maxCount={maxThumbsDown} />
       </div>
     </div>
   )
@@ -668,6 +699,85 @@ function UploaderLeaderboard({
                     )}
                     initial={{ width: 0 }}
                     animate={{ width: `${(u.count / maxUploads) * 100}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 + idx * 0.05 }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Thumbs-down leaderboard ───────────────────────────────────────────────
+// Mirrors the UploaderLeaderboard above. Renders the top users ranked by
+// cumulative thumbs-down count (i.e. ChatFeedback rows where
+// rating == "not_helpful"). Total is shown in the Failed Queries stat
+// card; this card is the per-user breakdown.
+
+function ThumbsDownLeaderboard({
+  entries,
+  maxCount,
+}: {
+  entries: { name: string; email: string; count: number }[]
+  maxCount: number
+}) {
+  const medals = ['🥇', '🥈', '🥉']
+
+  return (
+    <Card className="rounded-xl">
+      <CardHeader className="flex-row items-center justify-between gap-3 p-4 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/15">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-300" />
+          </div>
+          Thumbs-Down Leaderboard
+        </CardTitle>
+        <Badge variant="muted">{entries.length} users</Badge>
+      </CardHeader>
+      <CardContent className="space-y-2.5 p-4 pt-1">
+        {entries.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/15">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No thumbs-downs yet</p>
+            <p className="text-xs text-muted-foreground">Users are happy with the responses.</p>
+          </div>
+        ) : (
+          entries.map((u, idx) => (
+            <div key={u.email} className="flex items-center gap-3">
+              {/* Rank */}
+              <span className="w-6 shrink-0 text-center text-sm">
+                {idx < 3 ? medals[idx] : <span className="text-muted-foreground">{idx + 1}</span>}
+              </span>
+              {/* Avatar */}
+              <div
+                className={cn(
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white',
+                  avatarColor(u.email),
+                )}
+              >
+                {initials(u.name, u.email)}
+              </div>
+              {/* Name + bar */}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs font-medium text-foreground">{u.name}</span>
+                  <span className="shrink-0 text-xs font-semibold text-amber-300">
+                    {u.count}
+                  </span>
+                </div>
+                <div className="h-1 overflow-hidden rounded-full bg-foreground/8">
+                  <motion.div
+                    className={cn(
+                      'h-full rounded-full',
+                      idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-amber-300/70' : 'bg-foreground/30',
+                    )}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(u.count / maxCount) * 100}%` }}
                     transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 + idx * 0.05 }}
                   />
                 </div>

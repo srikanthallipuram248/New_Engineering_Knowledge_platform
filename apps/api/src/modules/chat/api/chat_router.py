@@ -2,14 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 from src.core.database import get_db
-from src.modules.chat.models.admin_models import FailedQuery
+from src.modules.chat.models.admin_models import (
+    ChatFeedback,
+    FailedQuery,
+)
 
 from src.modules.chat.models.chat_session import (
     ChatSession
 )
 from src.modules.chat.schemas.chat_schema import (
-    ChatRequest, 
-    ChatResponse
+    ChatRequest,
+    ChatResponse,
+    FeedbackRequest,
+    VALID_RATINGS,
 )
 
 from src.modules.chat.services.chat_service import ChatService
@@ -108,7 +113,9 @@ def chat(
             user=user
         )
 
-        ChatHistoryService.save(
+        # Persist assistant turn; capture its row id so the client can
+        # attach thumbs up/down feedback against this specific message.
+        assistant_msg = ChatHistoryService.save(
             db=db,
             user_id=user.id,
             session_id=session.id,
@@ -129,6 +136,7 @@ def chat(
             answer=response["answer"],
             session_id=request.session_id,
             answer_source=response.get("answer_source", "ai"),
+            message_id=assistant_msg.id,
             sources=response.get("sources", [])
         )
     except Exception as e:
@@ -295,7 +303,7 @@ def regenerate_answer(
         }
 
     # Save regenerated answer
-    ChatHistoryService.save(
+    assistant_msg = ChatHistoryService.save(
         db=db,
         user_id=user.id,
         session_id=session.id,
@@ -312,7 +320,78 @@ def regenerate_answer(
             reason=result["failure_reason"]
         )
 
+    # Attach the new assistant message id so the client can attach
+    # thumbs up/down feedback to the regenerated response.
+    result["message_id"] = assistant_msg.id
     return result
+
+
+# ── Feedback ──────────────────────────────────────────────────────────────
+# POST /chat/feedback — record a thumbs up/down on a specific assistant
+# ChatMessage row. One feedback per (message, user): subsequent calls upsert.
+# Drives the Admin Dashboard "Failed Queries" stat (sum of not_helpful) and
+# the per-user thumbs-down leaderboard.
+
+@router.post("/feedback")
+def submit_chat_feedback(
+    payload: FeedbackRequest,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    # Validate rating value
+    if payload.rating not in VALID_RATINGS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"rating must be one of {sorted(VALID_RATINGS)}"
+        )
+
+    # Confirm the target message exists AND belongs to this user — never
+    # let one user record feedback against another user's chat turn.
+    target_message = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.id == payload.message_id,
+            ChatMessage.user_id == user.id,
+            ChatMessage.role == "assistant",
+        )
+        .first()
+    )
+    if not target_message:
+        raise HTTPException(
+            status_code=404,
+            detail="Assistant message not found"
+        )
+
+    # Upsert: one row per (message_id, user_id). The model already has
+    # unique=True on message_id — but that's per-message, not per-user, so
+    # we look up by (message_id, user_id) and update if found.
+    existing = (
+        db.query(ChatFeedback)
+        .filter(
+            ChatFeedback.message_id == payload.message_id,
+            ChatFeedback.user_id == user.id,
+        )
+        .first()
+    )
+
+    if existing:
+        existing.rating = payload.rating
+    else:
+        db.add(
+            ChatFeedback(
+                message_id=payload.message_id,
+                user_id=user.id,
+                rating=payload.rating,
+            )
+        )
+
+    db.commit()
+
+    return {
+        "message_id": payload.message_id,
+        "rating": payload.rating,
+        "recorded": True,
+    }
 
 
 

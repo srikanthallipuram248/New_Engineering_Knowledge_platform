@@ -16,6 +16,10 @@ export interface SessionMessage {
   failed?: boolean
   sources?: SessionSource[]
   answer_source?: 'ai' | 'documents'
+  /** Server-side ChatMessage.id for the assistant turn — populated from
+   *  the /chat response so thumbs up/down feedback can target the
+   *  correct backend row. */
+  serverMessageId?: number
 }
 
 export interface SessionSource {
