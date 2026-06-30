@@ -15,6 +15,7 @@ export interface SessionMessage {
   pending?: boolean
   failed?: boolean
   sources?: SessionSource[]
+  answer_source?: 'ai' | 'documents'
 }
 
 export interface SessionSource {

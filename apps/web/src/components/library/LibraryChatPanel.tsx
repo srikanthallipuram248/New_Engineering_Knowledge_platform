@@ -31,7 +31,6 @@ import { fadeInUp } from "@/lib/motion-presets";
 // importing for streaming chat
 import {
   askChat,
-  askChatStream,
   getChatHistory,
   regenerateChat,
   createChatSession,
@@ -398,7 +397,13 @@ useEffect(() => {
       );
       const withResponse = withPending.map((m) =>
         m.id === assistantMsgId
-          ? { ...m, pending: false, content: res.answer, sources: res.sources }
+          ? {
+              ...m,
+              pending: false,
+              content: res.answer,
+              sources: res.sources,
+              answer_source: res.answer_source,
+            }
           : m,
       );
       saveSession({
@@ -490,43 +495,20 @@ useEffect(() => {
     setSending(true);
 
     try {
-      await askChatStream(
+      const res: ChatApiResponse = await askChat(
         content,
         currentSession.session_uuid,
         docIdsToSend,
-
-        (chunk) => {
-          // Append streamed text
-          pendingMsg.content += chunk;
-
-          // Update only the pending assistant message
-          const updatedMessages = withPending.map((msg) =>
-            msg.id === pendingMsg.id
-              ? {
-                  ...pendingMsg,
-                  pending: true,
-                }
-              : msg,
-          );
-
-          saveSession({
-            ...optimistic,
-            messages: updatedMessages,
-            updatedAt: new Date().toISOString(),
-          });
-
-          setSessions(loadSessions());
-        },
       );
-
-      // Streaming completed
-      pendingMsg.pending = false;
 
       const finalMessages = withPending.map((msg) =>
         msg.id === pendingMsg.id
           ? {
               ...pendingMsg,
               pending: false,
+              content: res.answer,
+              sources: res.sources,
+              answer_source: res.answer_source,
             }
           : msg,
       );
