@@ -31,5 +31,5 @@ Return ONLY a JSON object with these keys:
   "filters": {"filename": "..."} // or {}
 }
 
-Current context: User is focused ONLY on the repository they uploaded. If the question is even slightly related to the project or codebase, classify as 'rag'.
+Return ONLY valid JSON.
 """

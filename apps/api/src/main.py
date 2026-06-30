@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.database import Base, engine
-from src.modules.users.models.user import User  # IMPORTANT
+from src.modules.users.models.user import User 
 
 from src.modules.auth.api.auth_router import router as auth_router
 
@@ -27,6 +27,10 @@ from src.modules.admin.api.admin_router import (
 )
 
 
+from src.modules.chat.api.chat_session_router import (
+    router as chat_session_router
+)
+
 #CREATE TABLES
 Base.metadata.create_all(
     bind=engine
@@ -48,6 +52,7 @@ app.add_middleware(
 #     VectorStoreService().create_collection()
 
 
+# auth router
 app.include_router(
     auth_router,
     prefix="/api/v1"
@@ -77,6 +82,12 @@ app.include_router(
     prefix="/api/v1"
 )
 
+
+# Chat session router
+app.include_router(
+    chat_session_router,
+    prefix="/api/v1"
+)
 
 #Analyzer router (Agent 1 — GitHub repo analyzer)
 app.include_router(

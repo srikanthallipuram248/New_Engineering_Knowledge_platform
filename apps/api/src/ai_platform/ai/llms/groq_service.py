@@ -1,87 +1,161 @@
+import json
 from groq import Groq
 
 from src.core.config import settings
 
-from src.ai_platform.ai.prompts.system_promts import (
-    DOCUMENT_QA_SYSTEM_PROMPT
-)
+from src.ai_platform.ai.prompts.system_promts import DOCUMENT_QA_SYSTEM_PROMPT
+
+from typing import Generator
 
 
 class GroqService:
 
-    client = Groq(
-        api_key=settings.GROQ_API_KEY
-    )
+    MODEL = "llama-3.3-70b-versatile"
+
+    client = Groq(api_key=settings.GROQ_API_KEY)
 
     @classmethod
     def generate(
         cls,
         question: str,
         context: str,
-        history=None
+        history=None,
+        memory=None,
     ):
 
         if not context.strip():
+            return "I couldn't find relevant information " "in the uploaded documents."
 
-            return (
-                "I don't know based on the uploaded documents."
-            )
+        messages = cls._build_messages(
+            question=question,
+            context=context,
+            history=history,
+            memory=memory,
+        )
 
+        response = cls.client.chat.completions.create(
+            model=cls.MODEL, messages=messages, temperature=0, max_tokens=1000
+        )
+
+        return response.choices[0].message.content.strip()
+
+    # ----------------------
+    # Private helper
+    # --------------------
+    @classmethod
+    def _build_messages(
+        cls,
+        question: str,
+        context: str,
+        history=None,
+        memory=None,
+    ):
         messages = [
             {
                 "role": "system",
-                "content": DOCUMENT_QA_SYSTEM_PROMPT
+                "content": DOCUMENT_QA_SYSTEM_PROMPT,
             }
         ]
+
+        # Working Memory
+        if memory:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"""
+    Working Memory
+
+    The following JSON is conversational context.
+
+    Use it only to resolve references,
+    pronouns,
+    follow-up questions,
+    and conversational state.
+
+    Do not use it as factual evidence.
+
+    {json.dumps(memory, indent=2, default=str)}
+    """,
+                }
+            )
+
+        # Conversation History
+        if history:
+            for msg in history[-10:]:
+                role = msg.role if hasattr(msg, "role") else msg.get("role", "user")
+
+                content = (
+                    msg.content if hasattr(msg, "content") else msg.get("content", "")
+                )
+
+                if role in ("user", "assistant") and content:
+                    messages.append(
+                        {
+                            "role": role,
+                            "content": content,
+                        }
+                    )
 
         messages.append(
             {
                 "role": "user",
                 "content": f"""
-QUESTION:
-{question}
+    QUESTION:
+    {question}
 
-CONTEXT:
-{context}
+    CONTEXT:
+    {context}
 
-IMPORTANT:
+    IMPORTANT:
 
-If the answer exists in the context,
-answer ONLY from context.
+    Answer ONLY using the provided context.
 
-For tables, excel sheets,
-csv files and structured data:
+    If the answer cannot be found in the context,
+    say that you could not find the information.
 
-- Count rows if user asks count
-- Calculate totals if user asks total
-- Calculate averages if user asks average
-- Use only context data
+    Do not use outside knowledge.
 
-Never say you don't know if
-the required information exists
-in the provided context.
-"""
+    Never guess.
+
+    Never fabricate.
+    """,
             }
         )
 
-        response = cls.client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        return messages
+
+    # ----------------------------
+    # Streaming generator
+    # -----------------------------
+
+    @classmethod
+    def stream_generate(
+        cls,
+        question: str,
+        context: str,
+        history=None,
+        memory=None,
+    ) -> Generator[str, None, None]:
+
+        if not context.strip():
+            yield ("I couldn't find relevant information " "in the uploaded documents.")
+            return
+
+        messages = cls._build_messages(
+            question=question,
+            context=context,
+            history=history,
+            memory=memory,
+        )
+
+        stream = cls.client.chat.completions.create(
+            model=cls.MODEL,
             messages=messages,
-            temperature=0.0,
-            max_tokens=1000
+            temperature=0,
+            max_tokens=1000,
+            stream=True,
         )
 
-        answer = (
-            response
-            .choices[0]
-            .message
-            .content
-            .strip()
-        )
-
-        return answer
-    
-    
-    
-    
-    
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content

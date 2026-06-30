@@ -27,6 +27,22 @@ class ChatState(TypedDict):
     # Optional: scope RAG search to specific document IDs
     document_ids: Optional[List[int]]
 
+    #Metadata answer    
+    db: object
+    user_id: int
+    
+    #memory
+    memory: dict
+    
+    #Planner
+    plan: dict
+    
+    action: str
+    
+    db: object
+    
+    user_id: int
+
     # Optional admin analytics signal
     failure_reason: Optional[str]
 

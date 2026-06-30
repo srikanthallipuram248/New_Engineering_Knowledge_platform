@@ -1,0 +1,49 @@
+1. What GTUBE actually is?
+
+GTUBE stands for Generic Test for Unsolicited Bulk Email.
+It is a standard spam test string used to verify whether a spam filter is working correctly (similar to how EICAR is used for antivirus testing).
+
+If a mail system detects GTUBE content, it should flag the email as spam.
+
+2. Why your output looks broken
+
+Your response has these issues:
+
+🔁 Duplicate content repeated twice
+✂️ Truncated sentence (“detectin”, “detect”)
+📦 Raw email headers mixed with explanation
+❌ No proper summarization — just dumped retrieval chunks
+❌ Wrapped inside "answer" JSON without cleaning
+
+This usually happens when:
+
+The retrieval system returns multiple overlapping documents
+The LLM is not instructed to deduplicate or compress context
+The final answer is directly dumping retrieved chunks instead of synthesizing
+3. What the correct output should look like
+
+A clean answer should be:
+
+GTUBE (Generic Test for Unsolicited Bulk Email) is a standard test string used to verify that spam filters are properly installed and functioning. When an email contains the GTUBE string, compliant spam filters should automatically classify it as spam.
+
+4. How to fix your pipeline (important)
+
+If you’re building this system, you should:
+
+A. Deduplicate retrieved chunks
+
+Remove repeated documents before sending to LLM
+
+B. Add a synthesis prompt like:
+
+“Summarize the content. Do not repeat headers or duplicate text. Produce a single concise explanation.”
+
+C. Limit raw context injection
+
+Don’t pass full email headers unless explicitly needed
+
+D. Post-process output
+
+Trim incomplete words
+Remove repeated blocks
+Validate JSON structure

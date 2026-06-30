@@ -16,7 +16,8 @@ class VectorStoreService:
     def __init__(self):
         self.client = QdrantClient(
             host="qdrant",
-            port=6333
+            port=6333,
+            timeout=30
         )
 
         self.create_collection()
@@ -79,19 +80,12 @@ class VectorStoreService:
         #uploaded_by=None
     ):
 
-        #New
         must_conditions = []
 
-        if filters and filters.get("filename"):
-
-            must_conditions.append(
-                FieldCondition(
-                    key="filename",
-                    match=MatchValue(
-                        value=filters["filename"]
-                    )
-                )
-            )
+        # Note: "filename" in Qdrant payload is the repo/document name, NOT
+        # the individual source file. Filtering by filename would incorrectly
+        # block results when users ask about a specific file (e.g. chatController.js).
+        # File names appear inside the chunk text, so vector + BM25 handles it naturally.
 
         # Scope search to specific document IDs if provided
         if filters and filters.get("document_ids"):

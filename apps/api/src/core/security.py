@@ -9,7 +9,8 @@ from src.core.config import settings
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
-    deprecated="auto"
+    deprecated="auto",
+    bcrypt__rounds=10
 )
 
 #Password hashing

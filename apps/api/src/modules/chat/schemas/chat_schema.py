@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
-
+from uuid import UUID
 
 class ChatRequest(BaseModel):
     question: str
+    session_id: UUID
     document_ids: Optional[List[int]] = None
 
 
@@ -12,7 +13,6 @@ class SourceResponse(BaseModel):
     model_config = ConfigDict(
         exclude_none=True
     )
-
 
     document_id: int
     filename: str
@@ -29,8 +29,8 @@ class SourceResponse(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    intent: str
-
+    session_id: UUID
+    answer_source: str
     sources: List[SourceResponse] = Field(
         default_factory=list
     )

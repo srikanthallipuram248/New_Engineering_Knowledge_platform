@@ -26,27 +26,61 @@ export interface SessionSource {
   snippet: string
 }
 
+// export interface ChatSession {
+//   id: string
+//   /** Derived from first user message, or "New chat" */
+//   title: string
+//   createdAt: string
+//   updatedAt: string
+//   messages: SessionMessage[]
+//   /** Names of library documents at the time this session was created */
+//   docSnapshot: string[]
+//   /** IDs of documents scoped to this session for RAG (all docs if empty) */
+//   selectedDocIds: number[]
+// }
 export interface ChatSession {
+
+  // Local frontend ID
   id: string
-  /** Derived from first user message, or "New chat" */
+
+  // Backend session UUID
+  session_uuid: string
+
   title: string
+
   createdAt: string
   updatedAt: string
+
   messages: SessionMessage[]
-  /** Names of library documents at the time this session was created */
+
   docSnapshot: string[]
-  /** IDs of documents scoped to this session for RAG (all docs if empty) */
+
   selectedDocIds: number[]
 }
 
-const STORAGE_KEY = 'ekp.chat.sessions'
 const ACTIVE_SESSION_KEY = 'ekp.chat.activeSessionId'
+
+function getUserId(): string | null {
+  try {
+    const token = localStorage.getItem('token')
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload?.sub) return String(payload.sub)
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function getStorageKey(): string {
+  const uid = getUserId()
+  return uid ? `ekp.chat.sessions.${uid}` : 'ekp.chat.sessions'
+}
 
 // ── CRUD ─────────────────────────────────────────────────────────────────
 
 export function loadSessions(): ChatSession[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(getStorageKey())
     if (!raw) return []
     const parsed = JSON.parse(raw) as ChatSession[]
     // Migration: ensure selectedDocIds always exists (added in a later version)
@@ -61,10 +95,17 @@ export function loadSessions(): ChatSession[] {
 
 export function saveSessions(sessions: ChatSession[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
+    localStorage.setItem(getStorageKey(), JSON.stringify(sessions))
   } catch {
     /* ignore — quota exceeded or private mode */
   }
+}
+
+export function clearSessionsForUser(userId: string): void {
+  try {
+    localStorage.removeItem(`ekp.chat.sessions.${userId}`)
+    localStorage.removeItem(ACTIVE_SESSION_KEY)
+  } catch { /* ignore */ }
 }
 
 export function saveSession(session: ChatSession): void {
@@ -87,17 +128,42 @@ export function deleteSession(id: string): void {
   }
 }
 
+// export function createNewSession(
+//   docSnapshot: string[] = [],
+//   selectedDocIds: number[] = [],
+// ): ChatSession {
+//   return {
+//     id: crypto.randomUUID(),
+//     title: 'New chat',
+//     createdAt: new Date().toISOString(),
+//     updatedAt: new Date().toISOString(),
+//     messages: [],
+//     docSnapshot,
+//     selectedDocIds,
+//   }
+// }
+// New code
 export function createNewSession(
+  //sessionId: string,
+  session_uuid: string,
   docSnapshot: string[] = [],
   selectedDocIds: number[] = [],
 ): ChatSession {
   return {
     id: crypto.randomUUID(),
+
+    session_uuid,
+
     title: 'New chat',
+
     createdAt: new Date().toISOString(),
+
     updatedAt: new Date().toISOString(),
+
     messages: [],
+
     docSnapshot,
+
     selectedDocIds,
   }
 }

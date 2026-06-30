@@ -5,25 +5,44 @@ from src.ai_platform.ai.workflows.states.chat_state import ChatState
 from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
-    rag_chat_node,
-    general_chat_node
+    chat_node,
+    direct_chat_node
 )
 
 
-# Create Router fuction for intent router graph
-def route_intent(state):
 
-    if state.get("intent") == "chat":
-        return "chat"
-    
-    return "rag"
+
+def route_action(state):
+    return state.get(
+        "action",
+        "rag"
+    )
+
+
+def router_context(state):
+
+    context = state.get(
+        "context",
+        ""
+    )
+
+    if context.strip():
+        return "rag_found"
+
+    # If the user scoped to specific documents and we found nothing,
+    # still go through the chat node so the LLM can say "I couldn't
+    # find that in the selected document" rather than falling back to
+    # the generic direct_chat agent which ignores document context.
+    if state.get("document_ids"):
+        return "rag_found"
+
+    return "no_results"
 
 
 def build_chat_graph():
 
     graph = StateGraph(ChatState)
 
-    # Nodes
     graph.add_node(
         "analyze",
         analyze_node
@@ -44,23 +63,33 @@ def build_chat_graph():
         general_chat_node
     )
 
-    # Entry Points
     graph.set_entry_point(
         "analyze"
     )
 
-    # Intent Router
+    # graph.add_edge(
+    #     "analyze",
+    #     "rag"
+    # )
+
     graph.add_conditional_edges(
         "analyze",
-        route_intent,
+        route_action,
         {
-            "chat": "general_chat",
-            "rag": "rag"
+            "greeting": "direct_chat",
+            "chat": "direct_chat",
+            "rag": "rag",
+            "metadata": "direct_chat"
         }
     )
 
-    # RAG path
     graph.add_edge(
+        "direct_chat",
+        END
+    )
+
+
+    graph.add_conditional_edges(
         "rag",
         "rag_chat"
     )
@@ -76,7 +105,6 @@ def build_chat_graph():
     )
 
     return graph.compile()
-
 
 
 

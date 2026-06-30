@@ -9,39 +9,40 @@ class ChatHistoryService:
     def save(
         db,
         user_id,
+        session_id,
         role,
         content
     ):
-    
-        
         message = ChatMessage(
-            user_id = user_id,
-            role = role,
-            content = content
+            user_id=user_id,
+            session_id=session_id,
+            role=role,
+            content=content
         )
-
         db.add(message)
-
         db.commit()
         return message
 
     @staticmethod
     def get_recent(
         db,
+        session_id,
         user_id,
         limit=10
     ):
-        return (
+        # Fetch the most recent N messages then reverse so the LLM
+        # receives them in chronological order (oldest → newest).
+        rows = (
             db.query(ChatMessage)
             .filter(
-                ChatMessage.user_id == user_id
+                ChatMessage.user_id == user_id,
+                ChatMessage.session_id == session_id
             )
-            .order_by(
-                ChatMessage.id.desc()
-            )
+            .order_by(ChatMessage.id.desc())
             .limit(limit)
             .all()
         )
+        return list(reversed(rows))
 
 
 

@@ -7,13 +7,18 @@ class ChatAgent:
 
     @staticmethod
     def answer(
-        question,
-        context,
-        history=None
+        question: str,
+        context: str,
+        history = None,
+        memory=None
     ):
 
         return GroqService.generate(
             question=question,
             context=context,
-            history=history
+            history=history,
+            memory=memory
         )
+
+
+
