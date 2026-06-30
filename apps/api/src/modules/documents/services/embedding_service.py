@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingsService:
     
     model = SentenceTransformer(
-        "BAAI/bge-base-en-v1.5"
+        "all-MiniLM-L6-v2"
     )
         
     @classmethod
