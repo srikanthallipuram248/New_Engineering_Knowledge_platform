@@ -49,10 +49,13 @@ class HybridSearchService:
 
         vector_results = list(unique_results.values())
 
+        # all-MiniLM-L6-v2 cosine scores for relevant content typically sit
+        # in the 0.3-0.6 range, so 0.45 was dropping valid matches (especially
+        # prose/PDF chunks). BM25 re-ranks afterward, so a lower gate is safe.
         vector_results = [
             r
             for r in vector_results
-            if r.get("score", 0) > 0.45
+            if r.get("score", 0) > 0.3
         ]
 
         query_lower = query.lower()
