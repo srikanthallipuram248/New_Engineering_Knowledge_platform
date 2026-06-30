@@ -78,9 +78,7 @@ def rag_node(state):
         question=state["question"],
         history=state.get("history"),
         document_ids=state.get("document_ids") or [],
-        rewritten_question=state.get("rewritten_question"),
-        keywords=state.get("keywords"),
-        filters=state.get("filters"),
+        analysis=analysis,
     )
     
     print(state["rewritten_question"])

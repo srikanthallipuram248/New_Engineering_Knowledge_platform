@@ -98,25 +98,7 @@ class HybridSearchService:
         if not bm25_results:
             return []
 
-        reranked = RerankerService.rerank(
-            query=query,
-            results=bm25_results,
-            top_k=min(limit, 15)
-        )
-
-        print("=" * 80)
-        print("RERANK RESULTS =", len(reranked))
-
-        for r in reranked[:10]:
-            print(
-                r.get("filename"),
-                r.get("rerank_score")
-            )
-
-        if not reranked:
-            return []
-
-        return reranked
+        return bm25_results[:limit]
     
     
     

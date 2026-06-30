@@ -149,58 +149,32 @@ CONTENT:
         document_ids: list = None,
         analysis: dict = None
     ):
-        # Use pre-computed analysis from analyze_node when available so we
-        # don't make a second (redundant) Groq call here.
-        if rewritten_question is None or keywords is None:
-            analysis = AnalyzeAgent.analyze(question, history)
-            rewritten_question = analysis["rewritten_question"]
-            keywords = analysis.get("keywords", [])
-            filters = analysis.get("filters", {})
-
         if not analysis:
-            analysis = AnalyzeAgent.analyze(
-                question,
-                history
-            )
+            analysis = AnalyzeAgent.analyze(question, history)
 
-        scoped_filters = dict(filters)
+        rewritten_question = analysis.get("rewritten_question", question)
+        keywords = analysis.get("keywords", [])
+
+        search_query = " ".join(keywords) if keywords else rewritten_question
+
+        # Scoped search — within selected documents only
+        scoped_filters = analysis.get("filters", {}).copy()
         if document_ids:
             scoped_filters["document_ids"] = document_ids
 
-        filters = analysis.get(
-            "filters",
-            {}
-        )
-        if document_ids:
-            filters["document_ids"] = document_ids
-
-        search_query = " ".join(
-            analysis.get(
-                "keywords",
-                []
-            )
-        )
-
-        if not search_query:
-            search_query = rewritten_question
-
-        # Search within the selected documents first
         results = HybridSearchService.search(
             query=search_query,
-            queries=queries,
             filters=scoped_filters,
             limit=RAGService.SEARCH_LIMIT
         )
 
-        # If the selected docs returned nothing relevant (top BM25 score is
-        # very low or no results at all), fall back to the full knowledge base
-        # so the user still gets an answer from other indexed repos.
+        # Fall back to full knowledge base if scoped search returns nothing useful
         top_score = results[0].get("score", 0) if results else 0
         if document_ids and (not results or top_score < 0.5):
+            global_filters = analysis.get("filters", {}).copy()
             global_results = HybridSearchService.search(
                 query=search_query,
-                queries=queries,
-                filters=filters,  # no document_ids filter
+                filters=global_filters,
                 limit=RAGService.SEARCH_LIMIT
             )
             if global_results:
