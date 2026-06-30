@@ -252,9 +252,7 @@ class AnalyzeAgent:
     def analyze(
         cls,
         question: str,
-        history: list = None
-    ):
-        history=None,
+        history: list = None,
         memory=None
     ):
 
@@ -398,33 +396,17 @@ class AnalyzeAgent:
                 "intent": analysis.get("intent", "rag"),
                 "rewritten_question": analysis.get("rewritten_question", question),
                 "keywords": analysis.get("keywords", []),
-                "filters": analysis.get("filters", {})
-        except Exception as e:
-            print(f"AnalyzeAgent Error: {e}")
-            result = {
-                "intent": intent,
-                "rewritten_question": original_question,
-                "keywords": cls.generate_keywords(
-                    question
-                ),
-                "filters": {},
-                # "needs_rag": True
-                "needs_rag": intent in [
-                    "rag",
-                    "data",
-                    "compare",
-                    "summarize"
-                ]
+                "filters": analysis.get("filters", {}),
+                "action": analysis.get("action", "rag"),
             }
-
         except Exception as e:
             print(f"Error in AnalyzeAgent: {e}")
-            # Fallback to defaults
             return {
                 "intent": "rag",
                 "rewritten_question": question,
                 "keywords": [],
-                "filters": {}
+                "filters": {},
+                "action": "rag",
             }
 
 

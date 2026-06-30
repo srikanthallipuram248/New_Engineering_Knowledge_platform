@@ -6,7 +6,7 @@ from src.ai_platform.ai.workflows.nodes.chat_node import (
     analyze_node,
     rag_node,
     chat_node,
-    direct_chat_node
+    general_chat_node,
 )
 
 
@@ -33,7 +33,7 @@ def build_chat_graph():
     graph.add_node("analyze", analyze_node)
     graph.add_node("rag", rag_node)
     graph.add_node("chat", chat_node)
-    graph.add_node("direct_chat", direct_chat_node)
+    graph.add_node("general_chat", general_chat_node)
 
     graph.set_entry_point("analyze")
 
@@ -42,12 +42,12 @@ def build_chat_graph():
         "analyze",
         route_action,
         {
-            "greeting": "direct_chat",
+            "greeting": "general_chat",
             "rag": "rag",
         }
     )
 
-    graph.add_edge("direct_chat", END)
+    graph.add_edge("general_chat", END)
 
     # If RAG finds context → answer; if not → chat says "I couldn't find it"
     graph.add_conditional_edges(

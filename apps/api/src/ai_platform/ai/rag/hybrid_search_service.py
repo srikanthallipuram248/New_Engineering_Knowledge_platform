@@ -6,8 +6,6 @@ from src.modules.documents.services.bm25_service import (
     BM25Service
 )
 
-from src.ai_platform.ai.rag.reranker_service import (
-    RerankerService
 from src.ai_platform.ai.rag.query_expansion_service import (
     QueryExpansionService
 )
